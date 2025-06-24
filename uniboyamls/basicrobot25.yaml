@@ -1,0 +1,49 @@
+
+services:
+  wenv:
+    container_name: wenv
+    image: docker.io/natbodocker/virtualrobotdisi25:2.2
+    #image: virtualrobotdisi25:2.1
+    ports:
+      - 8090:8090 
+      - 8091:8091/tcp
+      - 8091:8091/udp
+    networks:
+      - iss-network
+  
+  basicrobot24:
+    container_name: basicrobot24
+    #image: docker.io/natbodocker/basicrobot24:3.0
+    image: basicrobot24:3.0
+    mem_limit: 512m
+    ports:
+      - "8020:8020/tcp"
+      - "8020:8020/udp"
+      - "8085:8085"
+    environment:
+      - VIRTUAL_ENV=wenv                         #Used by uniborobots.robotSupport.create
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka:8761/eureka/
+      - SERVICE_HOST=172.31.64.1      #basicrobot24 per app che usano basicrobot in docker
+      - SERVICE_IP=172.31.64.1
+      - MQTTBROKER=mosquitto
+    depends_on:
+      - wenv  
+    networks:
+      - iss-network
+
+networks:
+  iss-network:
+    external: true
+
+ 
+
+## yamls> docker network ls
+## docker network create iss-network
+## docker network rm xxx
+
+## -------------------------------------------------------------
+## TODO See https://docs.docker.com/compose/startup-order/
+## -------------------------------------------------------------
+## docker-compose -f basicrobot25.yaml  up
+## docker-compose run --service-ports wenv
+## docker-compose run --service-ports vrobotclient  ATTIVA ANCHE wenv

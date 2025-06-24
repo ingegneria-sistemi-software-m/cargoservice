@@ -1,0 +1,18 @@
+##mosquitto.yml
+
+services:
+
+  mosquitto:
+    image: eclipse-mosquitto:1.6.15
+    container_name: mosquittoalone
+    environment:
+      - MQTT_ALLOW_ANONYMOUS=true   # Permette connessioni anonime
+    ports:
+      - 1883:1883
+      - 9001:9001                   # Optional:Utilizzata per WebSocket MQTT
+ 
+## yamls> docker network ls
+## docker network create cargo-network
+## docker-compose -f mosquitto.yml -p mosquiito up
+
+ 

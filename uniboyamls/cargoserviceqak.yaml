@@ -1,0 +1,24 @@
+services:
+ 
+  cargoserviceqak:
+    container_name: cargoserviceqak 
+    #image: cargoserviceqak:1.0
+    image: docker.io/natbodocker/cargoserviceqak:1.0
+    environment:
+      - MONGO_HOST=mongodb
+      - SERVICE_IP=192.168.1.18
+    ports:
+      - 8111:8111/tcp
+      - 8111:8111/udp
+    networks:
+      - iss-network
+
+
+networks:
+    iss-network:
+       external: true
+
+## docker-compose -f cargoserviceqak.yaml  up
+## yamls> docker network ls
+## docker network create iss-network
+## docker network rm xxx

@@ -1,0 +1,22 @@
+
+services:
+  bwbscrbt:
+    container_name: bwbscrbt
+    #image: docker.io/natbodocker/bwbscrbt:1.0
+    image: bwbscrbt:1.0
+    environment:
+      - MQTTBROKER=mosquitto
+    ports:
+      - 8720:8720/tcp
+      - 8720:8720/udp
+    networks:
+      - iss-network
+ 
+  
+ 
+networks:
+  iss-network:
+    external: true
+ 
+### docker-compose -f bwbscrbt.yaml  up
+ 

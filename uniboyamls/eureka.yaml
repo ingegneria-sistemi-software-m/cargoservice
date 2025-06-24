@@ -1,0 +1,25 @@
+services:
+  
+  eureka:
+    image: 'natbodocker/springcloud-eureka'                                     
+    container_name: eurekaserver 
+    ports:	
+      - "8761:8761"
+    environment:
+      - EUREKA_CLIENT_REGISTER_WITH_EUREKA=false       # Il server Eureka non si registra da solo
+      - EUREKA_CLIENT_FETCH_REGISTRY=false             # Il server Eureka non recupera il registro
+      - EUREKA_SERVER_ENABLE_SELF_PRESERVATION=false   # Disabilita la modalità di auto-conservazione per testare l'auto-rimozione delle istanze
+      - EUREKA_INSTANCE_LEASE_RENEWAL_INTERVAL_IN_SECONDS=60
+      - EUREKA_INSTANCE_LEASE_EXPIRATION_DURATION_IN_SECONDS=120
+#    networks:
+#      - cargo-network
+
+#networks:
+#  cargo-network:
+#    external: true
+
+## yamls> docker network ls
+## docker network create cargo-network
+## docker-compose -f eureka.yaml -p eureka up
+
+ 

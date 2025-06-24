@@ -1,0 +1,86 @@
+services:
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.10     
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - xpack.security.transport.ssl.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    networks:
+      - iss-network
+ 
+  logstash:
+    image: docker.elastic.co/logstash/logstash:7.17.10   
+    container_name: logstash
+    volumes:
+      - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+    ports:
+      - "5044:5044" 		# Porta TCP per l'input TCP o Beats.
+    depends_on:
+      - elasticsearch
+    networks:
+      - iss-network
+ 
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.17.10   
+    container_name: kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch 
+    networks:
+      - iss-network
+
+  mosquitto:
+    image: eclipse-mosquitto:1.6.15
+    container_name: mosquitto
+    environment:
+      - MQTT_ALLOW_ANONYMOUS=true   # Permette connessioni anonime
+    ports:
+      - 1883:1883
+      - 9001:9001                   # Optional:Utilizzata per WebSocket MQTT
+    networks:
+      - iss-network
+
+  mongodb:
+    image: mongo:6.0.4
+    container_name: mongodb  
+    mem_limit: 512m
+    environment:
+      - MONGO_INITDB_DATABASE=cargodb # Nome del database da inizializzare
+    ports:
+      - "27017:27017"
+    command: mongod
+    networks:
+      - iss-network
+
+ 
+  eureka:
+    image: 'natbodocker/springcloud-eureka'                                     
+    container_name: eurekaserver 
+    ports:
+      - "8761:8761"
+    environment:
+      - EUREKA_CLIENT_REGISTER_WITH_EUREKA=true       # Il server Eureka non si registra da solo
+      - EUREKA_CLIENT_FETCH_REGISTRY=true             # Il server Eureka non recupera il registro
+      - EUREKA_SERVER_ENABLE_SELF_PRESERVATION=false   # Disabilita la modalità di auto-conservazione per testare l'auto-rimozione delle istanze
+      - EUREKA_INSTANCE_LEASE_RENEWAL_INTERVAL_IN_SECONDS=60
+      - EUREKA_INSTANCE_LEASE_EXPIRATION_DURATION_IN_SECONDS=120
+    networks:
+      - iss-network
+
+
+networks:
+  iss-network:
+    external: true
+
+## yamls> docker network ls
+## docker network create iss-network
+## docker network rm xxx
+## docker-compose -f iss2025new.yaml -p iss2025 up 

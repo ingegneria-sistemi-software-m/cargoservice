@@ -1,0 +1,12 @@
+services:
+  wenv:
+    image: docker.io/natbodocker/virtualrobotdisi25:2.2
+    #image: virtualrobotdisi25:2.2
+    ports:
+     - 8090:8090
+     - 8091:8091
+  
+
+## docker-compose -f virtualRobot25.yaml up
+## docker-compose down
+## docker-compose run --service-ports wenv    starts wenv
