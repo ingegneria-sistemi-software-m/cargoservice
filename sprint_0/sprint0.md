@@ -35,9 +35,24 @@ robot **fisico** capace di muoversi utilizzando due ruote motrici indipendenti c
 
 
 #### Hold (deposito)
+- rettangolare
 - slots
 - IO-Port
-- teoricamente POJO ma anche ATTORE per thread-safety
+- Home
+- teoricamente POJO ma meglio ATTORE per:
+    - thread-safety
+    - SRP (cargorobot non gestisce la logica dei dati)
+
+#### Slot
+they are the hold storage areas and are occupied by product containers
+
+#### IO-port
+è dove i product containers arrivano in attesa di essere recuperati dal cargorobot
+
+#### Home
+locazione all'interno del deposito da cui parte e ritorna il cargorobot dopo ogni richiesta di carico 
+
+#### Load (Carico) 
 
 
 #### Cargo Robot
@@ -46,9 +61,16 @@ robot **logico** capace, **sotto richiesta**, di: muoversi liberamente all'inter
 **Il committente fornisce del software per la modellazione del _cargorobot_**. In particolare:
 - l'ambiente virtuale [WEnv](./sprint0.md) (aggiusta link) che simula la stiva di una nave in cui il _cargorobot_ dovrà operare
 - un componente software chiamato [basicrobot](./sprint0.md) (aggiusta link) che permette di governare un DDR virtuale all'interno di WEnv 
+    - c'è un leggero abstraction gap rispetto ai requisiti del cargorobot e quelli che soddisfa il basicrobot. Il cargorobot deve anche:
+        - saper recuperare un container per poi trasportarlo
+        - saper rilasciare un container
+    - diventa quindi necessario estendere il basicrobot per implementare anche queste funzionalità
 
 **dettagli WEnv**
 // parla della mappa
+
+![Wenv](../requisiti/tf25scene.jpg)
+
 
 **dettagli basicrobot**
 // Il robot è un oggetto di dimensioni finite, inscrivibile in un cerchio di diametro D (unità robotica) ed esegue movimenti a velocità costante.
@@ -60,35 +82,64 @@ listone messaggi con cui si può interagire con il basicrobot
 ```
 
 
-#### Product (prodotto)
+#### Product/Freight (prodotto/merci)
 - racchiusi all'interno di un container e posizionati all'interno di uno slot
 - peso
-- id
+- pid
+
+#### Register (registrare)
+
+
+#### Container
 
 
 #### Product Service
+- si interfaccia con un database
+
+
+#### Sonar sensor
+- put in front of the io-port
+- used to detect the presence of a product container when it measures a distance D, such that D < DFREE/2, during a reasonable time (e.g. 3 secs).
+- attore in quanto ente attivo, che osserva le misurazioni per 3 secondi e successivamente aggiorna i suoi clienti
+
+
+#### cargoservice
+- macrocomponente core buisness del sistema
+- Fa da orchestrare.
+- riceve le richieste di carico
+    - sotto determinate condizioni le rifiuta
+
+
+#### dynamically-updated web gui
+pagina web che mostra graficamente, in tempo reale, lo stato del deposito e la posizione del cargorobot al suo interno
+- **caro committente, come facciamo a mandare una richiesta? chi la manda? la mettiamo come possibilità dentro la gui?**
 
 
 
 
 
 
-#### Sonar
-
-
-
-
-
-
-
-
-
-
-
-### Wenv | ambiente virtuale per la simulazione del cargorobot  
-Il committente fornisce un ambiente virtuale che modella il deposito della nave (**hold**) e il movimento **cargorobot** al suo interno [[wenv]](link a documentazione repo prof per wenv).
 
 ...
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
