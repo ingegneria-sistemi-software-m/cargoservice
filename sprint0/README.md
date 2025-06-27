@@ -39,29 +39,33 @@ I requisiti sono descritti dal committente nel documento: [documento dei requisi
 
 E' stato ritenuto più opportuno presentare i termini del dominio in un formato discorsivo, prolisso e ridondante, per garantire non solo che i termini non siano ambigui, ma anche che per il lettore sia difficile malinterpretare.
 Questo si contrappone al più comune approccio, in cui il vocabolario è un mero elenco puntato, nel quale è possibile che una mancata disambiguazione, possa evolvere in errori considerevoli durante lo sviluppo.
-Ci riserviamo la possibilità di ricondurci al classico vocabolario-elenco nel caso dovessero sorgere complicaizoni inaspettate, sicuri del fatto che l'eventuale conversione sarà semplice.
+Ci riserviamo la possibilità di ricondurci al classico vocabolario-elenco nel caso dovessero sorgere complicazioni inaspettate, sicuri del fatto che l'eventuale conversione sarà semplice.
 
 Un **Differential Drive Robot (DDR)** è un tipo di robot fisico e mobile che si muove grazie a due ruote motrici indipendenti, solitamente affiancate sullo stesso asse, che gli consentono di avanzare, arretrare o ruotare su sé stesso.
-"All'interno del sistema il DDR verrà utilizzato come supporto fisico per l'implementazione del _cargorobot_." ???
+"All'interno del sistema il DDR verrà utilizzato come supporto fisico per l'implementazione del _cargorobot_." 
 
 La **stiva (Hold)** rappresenta il workspace del robot: lo scenario entro cui è confinato ed in cui svolge i suoi **interventi di carico**.
 E' di forma rettangolare e sono presenti alcune aree notevoli e fisse che è bene segnalare con un nome univoco:
 - La **home** è la postazione da cui il robot parte e a cui il robot fa ritorno al termine di ogni intervento.
-- Gli **slots** le zone in cui vengono immagazzinati i container. Sono 5 indicano le postazioni i cui il robot può depositarei container: da notare che il container numero 5 è sempre pieno e quindi in qualche modo si riduce ad un ostacolo.
+- Gli **slots** sono le zone in cui vengono immagazzinati i container. Sono 5 indicano le postazioni i cui il robot può depositare i container: da notare che il container numero 5 è sempre pieno e quindi in qualche modo si riduce ad un ostacolo.
 - La **IO-Port** indica la posizione dove verranno depositati i container in arrivo, e dove quindi il cargorobot li andrà a prendere per poi spostarli.
+
 Si è detto che il deposito è l'area di lavoro del cargorobot: si noti, a tal proposito, il tentativo di descrivere il deposito, e gli elementi che lo compongono, inevitabilmente, conduce a una prima vaga descrizione dei processi che vi si svolgono (**interventi di carico**).
 Naturalmente, questo dipende dalla scelta, deliberata, di utilizzare gli elementi della stiva per descriverla.  
 Questo crea nella stiva una dipendenza forte dai suoi elementi, che riteniamo ragionevole, perchè non è particolarmente realistico, che una delle estensioni future preveda una stiva senza questi elementi notevoli al suo interno.
 
-????
-Non sarebbe irragionevole immaginare di rappresentare la stiva come un pojo, ma si è scelto di interpretarla come un attore per i seguenti motivi:
-- thread-safety
-- Single Responsability Principle: il cargorobot non gestisce la logica dei dati
+
+Non sarebbe irragionevole immaginare di rappresentare la stiva come un POJO, ma si è scelto di interpretarla come un attore per i seguenti motivi:
+- Single Responsability Principle, il cargoservice si occupa della logica di buisness mentre la stiva si gestisce la logica dei dati
 - uniformità rispetto al sistema in senso ampio
 
 Un **container** è un entità associata ad ogni richiesta di **intervento di carico** del robot, che andrà spostata dalla IO-Port ad uno degli slot liberi, e che contiene **prodotti(o merci)**.
 Questi **prodotti** sono sempre all'interno di un container e sono caratterizzati da un peso e da un identificativo (pid > 0).
-Ogni prodotto è **registrato** prima di essere caricato. L'operazione di **rigistrazione** consiste semplicemente nel inserimento delle caratteristiche del prodotto (ci sia aspetta quindi, prevalentemente, prodotti industriali, prodotti in serie, sempre allo stesso modo, e non artigianali ed unici).
+Ogni prodotto è **registrato** prima di essere caricato. L'operazione di **registrazione** consiste semplicemente nell'inserimento delle caratteristiche del prodotto (ci si aspetta quindi, prevalentemente, prodotti industriali, prodotti in serie, sempre allo stesso modo, e non artigianali ed unici).
+
+#### holdservice
+attore 
+
 
 
 #### Cargo Robot
@@ -70,13 +74,41 @@ robot **logico** capace, **sotto richiesta**, di: muoversi liberamente all'inter
 **Il committente fornisce del software per la modellazione del _cargorobot_**. In particolare:
 - l'ambiente virtuale [WEnv](./sprint0.md) (aggiusta link) che simula la stiva di una nave in cui il _cargorobot_ dovrà operare
 - un componente software chiamato [basicrobot](./sprint0.md) (aggiusta link) che permette di governare un DDR virtuale all'interno di WEnv 
-    - c'è un leggero abstraction gap rispetto ai requisiti del cargorobot e quelli che soddisfa il basicrobot. Il cargorobot deve anche:
-        - saper recuperare un container per poi trasportarlo
-        - saper rilasciare un container
+    - c'è un leggero abstraction gap rispetto ai requisiti del cargorobot e quelli soddisfatti dal basicrobot. Il cargorobot deve anche saper:
+        - caricare un container per poi trasportarlo
+        - scaricare un container
     - diventa quindi necessario estendere il basicrobot per implementare anche queste funzionalità.
 
 **dettagli WEnv**
-// parla della mappa
+L'ambiente virtuale _WEnv_ modella la tipica stiva della nave in cui dovrà andare ad operare il _cargorobot_ e include un simulatore di DDR.
+
+Il DDR all'interno di WEnv è un robot inscrivibile in un cerchio di **raggio R** che può compiere solamente 4 mosse:
+- andare avanti per un certo periodo di tempo
+- andare indietro per un certo periodo di tempo
+- ruotare a destra di 90°
+- ruotare a sinistra di 90°
+
+Il committente fornisce poi il tempo necessario al DDR per andare avanti o indietro di una distanza pari alla sua dimensione. Si ha quindi a disposizione anche una quinta mossa elementare chiamata **step** che corrisponde ad un passo del DDR lungo 2R.
+
+Il committente ha anche specificato che lo step fornisce un unità di misura per misurare le dimensioni del deposito 
+
+... In assenza meccanismi per la misurazione delle distanze nel deposito, si considera come unità spaziale la dimensione fisica R del _cargorobot_ fornito dal committente, misurabile in step di durata fissata.
+
+Il deposito pertanto può essere modellato come uno spazio rettangolare bidimensionale di dimensioni SA_Hx2R e SA_Wx2R.
+
+// mostra mappa
+
+// origine del sistema di riferimento
+
+// elenca posizioni di interesse
+
+Hold.S1: {(0,0), RIGHT}
+Hold.S2: {(4,1), LEFT}
+Hold.S3: {(0,4), RIGHT}
+Hold.s4: {(4,3), LEFT}
+Hold.ioport: {(_, 0), DOWN}
+Hold.home: {(0, 0)}
+
 
 ![Wenv](../requisiti/scene.jpg)
 
@@ -97,8 +129,9 @@ listone messaggi con cui si può interagire con il basicrobot
 #### Sonar Sensor
 - put in front of the io-port
 - used to detect the presence of a product container when it measures a distance D, such that D < DFREE/2, during a reasonable time (e.g. 3 secs).
-- attore in quanto ente attivo, che osserva le misurazioni per 3 secondi e successivamente aggiorna i suoi clienti
 
+#### sonarservice
+- attore in quanto ente attivo, che osserva le misurazioni per 3 secondi e successivamente aggiorna i suoi clienti
 
 #### Cargoservice
 - macrocomponente core buisness del sistema
@@ -107,17 +140,27 @@ listone messaggi con cui si può interagire con il basicrobot
     - sotto determinate condizioni le rifiuta
 
 
-Infine la **dynamically updated web GUI** è la pagina web che mostra graficamente, in tempo reale, lo stato del deposito e la posizione del cargorobot al suo interno. Si noti che non è previsto di poter visualizzare i container, ne le informazioni relative ai prodotti al loro inerno.
+Infine la **dynamically updated web GUI** è la pagina web che mostra graficamente, in tempo reale, lo stato del deposito. Si noti che non è previsto di poter visualizzare i container, ne le informazioni relative ai prodotti al loro inerno.
 
-**caro committente, come facciamo a mandare una richiesta? chi la manda? la mettiamo come possibilità dentro la gui?** ???
 
 ## Macrocomponenti
+// interazioni 
 
--
--
--
--
--
+- cargoservice
+    - orchestratore che comunica con praticamente tutti
+        - riceve eventi riguardo alla presenza/assenza di container da sonarservice
+        - manda query a product service per recuperare il peso del prodotto da caricare
+        - comunica con holdservice per recuperare il prossimo slot libero e per occuparlo
+- productservice
+    - registra i prodotti
+    - riceve richieste di registrazione da clienti esterni al sistema
+    - riceve query da cargoservice per recuperare il peso relativo ad un prodotto che deve caricare
+- sonarservice
+    - invia aggiornamento sulla presenza o meno del container al cargoservice
+- holdservice
+    - comunica con cargoservice per fornire il prossimo slot libero e per aggiornare il suo stato  
+- web-gui
+    - riceve gli aggiornamenti sullo stato del deposito da holdservice
 
 ## Architettura di Riferimento
 
@@ -148,30 +191,42 @@ Il seguente diagramma rappresenta l'architettura iniziale di riferimento per lo 
 Il test di sistema è un collaudo interno che in questa prima fase ha il preciso compito di confermare il corretto funzionamento della rete e delle interazioni via messaggi attraverso di essa dei vari componenti (mock in questa prima fase).  
 Questo obbliga, inevitabilmente, a riflettere sulle interazioni tra i componenti del sistema, prima di realizzarli.
 
-Scenario di test 1: ...
+Scenario di test 1: richiesta di carico accettata da cargoservice
 
 ```text
     <inserire qui il codice dello es. richiesta di carico con peso massimo già raggiunto>
 ```
 
-Scenario di test 2: ...
+Scenario di test 2: ... rifiutata per peso ecceduto
 
 ```text
     <inserire qui il codice dello es. richiesta di carico con peso massimo già raggiunto>
 ```
+
+Scenario di test 3: ... rifiutata per mancanza di slot libero
+
+Scenario di test 4: ... rifiutata per prodotto inesistente nel product service
+
+Scenario di test 5: ... rifiutata a causa di altro intervento di carico in corso
 
 ## Piano di Lavoro
 
 Oltre a questo sprint 0 iniziale, dedicato all'impostazione del progetto, nel nostro processo Scrum abbiamo previsto tre sprint operativi:
-1. .
-1. .
-1. .
+1. Sprint1
+    - implementazione macrocomponente cargoservice (corebuisness del sistema)
+    - estensione del basicrobot per implementare le operazioni mancanti richieste dal cargorobot
+2. Sprint2
+    - sonarservice
+    - holdservice
+3. Sprint3
+    - product service
+    - gui
 
 | Numero sprint             | Data inizio (indicativa)  | Data fine (indicativa)    | Lavoro Stimato Totale (h) |
 |---------------------------|---------------------------|---------------------------|---------------------------|
-| Sprint 1                  | 07/07/2025                | 11/07/2025                | nn                        |
-| Sprint 2                  | 14/07/2025                | 18/07/2025                | nn                        |
-| Sprint 3                  | 21/07/2025                | 25/08/2025                | nn                        |
+| Sprint 1                  | 07/07/2025                | 11/07/2025                | 30                        |
+| Sprint 2                  | 14/07/2025                | 18/07/2025                | 20                        |
+| Sprint 3                  | 21/07/2025                | 25/08/2025                | 20                        |
 
 La pianificazione temporale costituisce un riferimento per il team.  
 Sono comunque contemplate variazioni, nel limite del ragionevole, purché non compromettano il ritmo generale del lavoro.  
