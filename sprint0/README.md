@@ -4,6 +4,7 @@
 
 - [Obiettivi](#obiettivi)
 - [Requisiti](#requisiti)
+- [Componenti Fornite](#componenti-fornite)
 - [Vocabolario](#vocabolario)
 - [Macrocomponenti](#macrocomponenti)
 - [Architettura di Riferimento](#architettura-di-riferimento)
@@ -35,6 +36,13 @@ Inoltre, in questa sezione si deciderà come suddividere il lavoro tra i membri 
 
 I requisiti sono descritti dal committente nel documento: [documento dei requisiti](../requisiti/). 
 
+## Componenti Fornite
+
+Non tutte le componenti del sistema devono essere realizzate perchè sono fornite dal committente o perchè sono già a disposizione.  
+E' già disponibile il sensore Sonar.
+E' inoltre già disponibile il basicrobot, che dovrà essere esteso, come punto di partenza per il cargorobot.
+Il committente mette a disposizione il ???
+
 ## Vocabolario
 
 E' stato ritenuto più opportuno presentare i termini del dominio in un formato discorsivo, prolisso e ridondante, per garantire non solo che i termini non siano ambigui, ma anche che per il lettore sia difficile malinterpretare.
@@ -47,24 +55,39 @@ Un **Differential Drive Robot (DDR)** è un tipo di robot fisico e mobile che si
 La **stiva (Hold)** rappresenta il workspace del robot: lo scenario entro cui è confinato ed in cui svolge i suoi **interventi di carico**.
 E' di forma rettangolare e sono presenti alcune aree notevoli e fisse che è bene segnalare con un nome univoco:
 - La **home** è la postazione da cui il robot parte e a cui il robot fa ritorno al termine di ogni intervento.
-- Gli **slots** sono le zone in cui vengono immagazzinati i container. Sono 5 indicano le postazioni i cui il robot può depositare i container: da notare che il container numero 5 è sempre pieno e quindi in qualche modo si riduce ad un ostacolo.
-- La **IO-Port** indica la posizione dove verranno depositati i container in arrivo, e dove quindi il cargorobot li andrà a prendere per poi spostarli.
+- Gli **slots** sono le zone da cui il robot immagaiona i container. Sono 5 indicano le postazioni i cui il robot può depositare i container: da notare che il container numero 5 è sempre pieno e quindi in qualche modo si riduce ad un ostacolo. Ogni slot richiede che il robot sia adeguatamente orientato per immagazzinare: l'orientamente necessario cambia da uno slot ad un altro.
+- La **IO-Port** indica la posizione dove verranno depositati i container in arrivo, e dove quindi il cargorobot li andrà a prendere per poi spostarli. E' richesto che il robot sia rivolto verso il basso per prendere il container dall'**IO-port**.
 
 Si è detto che il deposito è l'area di lavoro del cargorobot: si noti, a tal proposito, il tentativo di descrivere il deposito, e gli elementi che lo compongono, inevitabilmente, conduce a una prima vaga descrizione dei processi che vi si svolgono (**interventi di carico**).
 Naturalmente, questo dipende dalla scelta, deliberata, di utilizzare gli elementi della stiva per descriverla.  
 Questo crea nella stiva una dipendenza forte dai suoi elementi, che riteniamo ragionevole, perchè non è particolarmente realistico, che una delle estensioni future preveda una stiva senza questi elementi notevoli al suo interno.
 
-
 Non sarebbe irragionevole immaginare di rappresentare la stiva come un POJO, ma si è scelto di interpretarla come un attore per i seguenti motivi:
-- Single Responsability Principle, il cargoservice si occupa della logica di buisness mentre la stiva si gestisce la logica dei dati
-- uniformità rispetto al sistema in senso ampio
+- Single Responsability Principle; il cargoservice si occupa della logica di buisness mentre la stiva gestisce la logica dei dati.
+- Uniformità rispetto al sistema in senso ampio.
+
+La mappa della stiva è la seguente e l'origine del sistema di riferimento coincide con la home:
+
+```text
+    H , 1 , 1 , 1 , 1 , 1 , 1 , 
+    1 , S1, X , X , S2, 1 , 1 , 
+    1 , 1 , 1 , 1 , X , 1 , 1 , 
+    1 , S3, X , X , S4, 1 , 1 , 
+    1 , 1 , 1 , 1 , 1 , 1 , 1 , 
+    P , X , X , X , X , X , X , 
+```
+
+Hold.H:   {(0, 0)}
+Hold.P:   {(0, 5), DOWN}
+Hold.S1:  {(1, 1), RIGHT}
+Hold.S2:  {(4, 1), LEFT}
+Hold.S3:  {(1, 3), RIGHT}
+Hold.S4:  {(4, 3), LEFT}
+Hold.X:   {(2, 1), (3, 1), (2, 3), (3, 3), (2, 4)}
 
 Un **container** è un entità associata ad ogni richiesta di **intervento di carico** del robot, che andrà spostata dalla IO-Port ad uno degli slot liberi, e che contiene **prodotti(o merci)**.
 Questi **prodotti** sono sempre all'interno di un container e sono caratterizzati da un peso e da un identificativo (pid > 0).
 Ogni prodotto è **registrato** prima di essere caricato. L'operazione di **registrazione** consiste semplicemente nell'inserimento delle caratteristiche del prodotto (ci si aspetta quindi, prevalentemente, prodotti industriali, prodotti in serie, sempre allo stesso modo, e non artigianali ed unici).
-
-#### holdservice
-attore 
 
 
 
@@ -82,75 +105,53 @@ robot **logico** capace, **sotto richiesta**, di: muoversi liberamente all'inter
 **dettagli WEnv**
 L'ambiente virtuale _WEnv_ modella la tipica stiva della nave in cui dovrà andare ad operare il _cargorobot_ e include un simulatore di DDR.
 
-Il DDR all'interno di WEnv è un robot inscrivibile in un cerchio di **raggio R** che può compiere solamente 4 mosse:
+Il DDR all'interno di WEnv è un robot inscrivibile in un cerchio di raggio R che può compiere solamente 4 mosse:
 - andare avanti per un certo periodo di tempo
 - andare indietro per un certo periodo di tempo
 - ruotare a destra di 90°
 - ruotare a sinistra di 90°
 
-Il committente fornisce poi il tempo necessario al DDR per andare avanti o indietro di una distanza pari alla sua dimensione. Si ha quindi a disposizione anche una quinta mossa elementare chiamata **step** che corrisponde ad un passo del DDR lungo 2R.
-
-Il committente ha anche specificato che lo step fornisce un unità di misura per misurare le dimensioni del deposito 
-
-... In assenza meccanismi per la misurazione delle distanze nel deposito, si considera come unità spaziale la dimensione fisica R del _cargorobot_ fornito dal committente, misurabile in step di durata fissata.
-
-Il deposito pertanto può essere modellato come uno spazio rettangolare bidimensionale di dimensioni SA_Hx2R e SA_Wx2R.
-
-// mostra mappa
-
-// origine del sistema di riferimento
-
-// elenca posizioni di interesse
-
-Hold.S1: {(0,0), RIGHT}
-Hold.S2: {(4,1), LEFT}
-Hold.S3: {(0,4), RIGHT}
-Hold.s4: {(4,3), LEFT}
-Hold.ioport: {(_, 0), DOWN}
-Hold.home: {(0, 0)}
-
+Il committente fornisce poi il tempo necessario al DDR per andare avanti o indietro di una distanza pari alla sua dimensione.  
+Si ha quindi a disposizione anche una quinta mossa elementare chiamata **step** che corrisponde ad un passo del DDR lungo 2R.
+Il committente ha anche specificato che lo step fornisce un unità di misura per misurare le dimensioni del deposito.
+In assenza meccanismi per la misurazione delle distanze nel deposito, si considera come unità spaziale la dimensione fisica R del cargorobot fornito dal committente, misurabile in step di durata fissata.
 
 ![Wenv](../requisiti/scene.jpg)
 
-
 **dettagli basicrobot**
-// Il robot è un oggetto di dimensioni finite, inscrivibile in un cerchio di diametro D (unità robotica) ed esegue movimenti a velocità costante.
-
-// Il basicrobot fornito dal committente è un puro esecutore di comandi, con cui il robot può effettuare singole mosse o sequenze di mosse, a seguito di messaggi di richiesta.
-
+Il robot è un oggetto di dimensioni finite, inscrivibile in un cerchio di diametro D (unità robotica) ed esegue movimenti a velocità costante.
+Il basicrobot fornito dal committente è un puro esecutore di comandi, con cui il robot può effettuare singole mosse o sequenze di mosse, a seguito di messaggi di richiesta.
 ```
 listone messaggi con cui si può interagire con il basicrobot 
 ```
 
-#### Product Service
+Product Service
 - si interfaccia con un database
-
-
-#### Sonar Sensor
+holdservice
+attore 
+Sonar Sensor
 - put in front of the io-port
 - used to detect the presence of a product container when it measures a distance D, such that D < DFREE/2, during a reasonable time (e.g. 3 secs).
-
-#### sonarservice
+sonarservice
 - attore in quanto ente attivo, che osserva le misurazioni per 3 secondi e successivamente aggiorna i suoi clienti
-
-#### Cargoservice
+Cargoservice
 - macrocomponente core buisness del sistema
 - Fa da orchestrare.
 - riceve le richieste di carico
     - sotto determinate condizioni le rifiuta
 
-
 Infine la **dynamically updated web GUI** è la pagina web che mostra graficamente, in tempo reale, lo stato del deposito. Si noti che non è previsto di poter visualizzare i container, ne le informazioni relative ai prodotti al loro inerno.
 
-
 ## Macrocomponenti
-// interazioni 
 
-- cargoservice
-    - orchestratore che comunica con praticamente tutti
-        - riceve eventi riguardo alla presenza/assenza di container da sonarservice
-        - manda query a product service per recuperare il peso del prodotto da caricare
-        - comunica con holdservice per recuperare il prossimo slot libero e per occuparlo
+Il sistema deve essere distribuito su N nodi computazionali diversi???
+
+Segue l'elenco dei macrocomponenti software da sviluppare:
+
+- cargoservice (orchestratore che comunica con praticamente tutti)
+    - riceve eventi riguardo alla presenza/assenza di container da sonarservice
+    - manda query a product service per recuperare il peso del prodotto da caricare
+    - comunica con holdservice per recuperare il prossimo slot libero e per occuparlo
 - productservice
     - registra i prodotti
     - riceve richieste di registrazione da clienti esterni al sistema
@@ -184,43 +185,39 @@ Il seguente diagramma rappresenta l'architettura iniziale di riferimento per lo 
 
 ## Piano di Test
 
-(maybe link to .kt ...)
+E' disponibile il [riferimanto al codice dei test](./nonloso).
 
 ### Test di Sistema
 
 Il test di sistema è un collaudo interno che in questa prima fase ha il preciso compito di confermare il corretto funzionamento della rete e delle interazioni via messaggi attraverso di essa dei vari componenti (mock in questa prima fase).  
 Questo obbliga, inevitabilmente, a riflettere sulle interazioni tra i componenti del sistema, prima di realizzarli.
 
-Scenario di test 1: richiesta di carico accettata da cargoservice
+Scenario di test 1: richiesta di intervento di carico accettata da cargoservice
 
 ```text
     <inserire qui il codice dello es. richiesta di carico con peso massimo già raggiunto>
 ```
 
-Scenario di test 2: ... rifiutata per peso ecceduto
+Scenario di test 2: richiesta di intervento di carico rifiutata a causa di altro intervento di carico in corso
 
-```text
-    <inserire qui il codice dello es. richiesta di carico con peso massimo già raggiunto>
-```
+Scenario di test 3: richiesta di intervento di carico rifiutata a causa della mancanza di slot libero
 
-Scenario di test 3: ... rifiutata per mancanza di slot libero
+Scenario di test 4: richiesta di intervento di carico rifiutata a causa dell'assenza del prodotto nel db gestito da productservice
 
-Scenario di test 4: ... rifiutata per prodotto inesistente nel product service
-
-Scenario di test 5: ... rifiutata a causa di altro intervento di carico in corso
+Scenario di test 5: richiesta di intervento di carico rifiutata a causa del peso eccessivo del container
 
 ## Piano di Lavoro
 
 Oltre a questo sprint 0 iniziale, dedicato all'impostazione del progetto, nel nostro processo Scrum abbiamo previsto tre sprint operativi:
-1. Sprint1
-    - implementazione macrocomponente cargoservice (corebuisness del sistema)
-    - estensione del basicrobot per implementare le operazioni mancanti richieste dal cargorobot
-2. Sprint2
+1. Sprint 1
+    - estensione del basicrobot per implementare le operazioni mancanti necessarie al cargorobot
+    - cargoservice (corebuisness del sistema)
+1. Sprint 2
     - sonarservice
     - holdservice
-3. Sprint3
-    - product service
-    - gui
+1. Sprint 3
+    - productservice
+    - web-gui
 
 | Numero sprint             | Data inizio (indicativa)  | Data fine (indicativa)    | Lavoro Stimato Totale (h) |
 |---------------------------|---------------------------|---------------------------|---------------------------|
