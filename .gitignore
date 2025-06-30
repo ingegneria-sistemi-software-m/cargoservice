@@ -35,7 +35,6 @@ Desktop.ini
 
 # === Java ===
 *.class
-*.jar
 *.war
 *.ear
 
