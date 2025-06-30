@@ -24,7 +24,7 @@ Questo consente di costruire progressivamente un quadro generale solido e condiv
 L’approccio agile descritto nella [scrum guide](https://scrumguides.org/) rappresenta il riferimento metodologico adottato.  
 Gli sprint eseguono uno zoom progressivo sulle macro-componenti, attivando un processo iterativo di analisi, progettazione, sviluppo e testing del componente o del sottosistema previsto dallo sprint.
 
-- [Sprint 0](/sprint0)
+- [Sprint 0](sprint0)
 - Sprint 1 (previsto ma ancora da mettere in atto)
 - Sprint 2 (previsto ma ancora da mettere in atto)
 - Sprint 3 (previsto ma ancora da mettere in atto)

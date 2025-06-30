@@ -1,5 +1,51 @@
-# Ignore Gradle project-specific cache directory
-.gradle
+# === Eclipse-specific ===
+.metadata/
+*.tmp
+*.bak
+*.swp
+*~.nib
+local.properties
+.settings/
+.project
+.classpath
 
-# Ignore Gradle build output directory
-build
+# === Gradle-specific ===
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# === OS-specific ===
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# === IDEs/Tools ===
+.idea/
+.vscode/
+
+# === Logs and temporary files ===
+*.log
+*.lock
+
+# === Java ===
+*.class
+*.jar
+*.war
+*.ear
+
+# === Test reports ===
+test-results/
+test-output/
+
+# === Coverage ===
+jacoco.exec
+
+# === Generated files ===
+bin/
+out/
