@@ -141,7 +141,7 @@ In seguito la mappa fornita dal committente e le coordinate delle posizioni note
 ```
 // non c'è bisogno di indicare il direzionamento in quanto ho specificato sopra
 - Home:              Hold.Home = (0,0)
-- Slots:             Hold.Slots = {(2,1), (3,1), (2,3), (3,3), (4,2)}
+- Slots:             Hold.Slots = {(2,1), (3,1), (2,3), (3,3)}
 - Laydown-positions: Hold.LaydownPositions = {(1,1), (1,3), (4,1), (4,3)}
 - IO-port:           Hold.IoPort = (0,5)
 - Pickup-position:   Hold.PickupPosition = (0,4)
@@ -151,7 +151,7 @@ Indicando nella mappa fornita le coordinate specificate otteniamo la seguente ma
 ```text
     H,  1,  1,  1,  1,  1,  1, 
     r,  L1, S1, S2, L2, 1,  1, 
-    1,  1,  1,  1,  S5, 1,  1, 
+    1,  1,  1,  1,  X,  1,  1, 
     1,  L3, S3, S4, L4, 1,  1, 
     P,  1,  1,  1,  1,  1,  1, 
     IO, X,  X,  X,  X,  X,  X,   
@@ -232,7 +232,7 @@ Il _sonar_ è infine caratterizzato da una costante chiamata **_DFREE_** che def
 
 Siccome _DFREE_ rappresenta una distanza è opportuno modellarlo come un valore rele maggiore di zero.
 
-Un componente strettamente associato al _sonar_ è il **_Led_**. I requisiti speicificano che in caso di misurazioni del _sonar_ riconducibili a malfunzionamenti di quest'ultimo, il led **deve essere acceso da _cargoservice_** in modo da notificare la presenza del malfunzionamento. Questo è un comportamento **passivo** e pertanto modellabile tramite un POJO. Tuttavia, siccome è presumibile che il led fisico da accendere risieda in un nodo fisico distinto rispetto a quello di _cargoservice_, è più opportuno modellare _led_ come un **attore** parte di un sistema distribuito.   
+Un componente strettamente associato al _sonar_ è il **_Led_**. I requisiti speicificano che in caso di misurazioni del _sonar_ riconducibili a malfunzionamenti di quest'ultimo, **il sistema deve accendere il led** in modo da notificare la presenza del malfunzionamento. Questo è un comportamento **passivo** e pertanto modellabile tramite un POJO. Tuttavia, siccome è presumibile che il led fisico da accendere risieda in un nodo fisico remoto rispetto al resto del sistema, è più opportuno modellare _led_ come un **attore** parte di un sistema distribuito.   
 
 
 
@@ -246,13 +246,21 @@ Il **_Cargoservice_** è il macrocomponente principale che implementa il core-bu
 
 Modellare il cargoservice come **attore** è ancora più opportuno rispetto ai casi precedenti in quanto oltre ad essere un componente attivo, è anche un componente **reattivo** agli eventi del _sonar_.
 
+Dopo una interazione con il committente si è scoperto che le richieste di carico a _cargoservice_ arrivano da un **attore esterno al sistema** non necessariamente umano. Non è richiesto implementare questo attore nel nostro sistema.
 
-// bisogna capire che cosa intende il prof con stato del deposito
 Infine, la **dynamically updated web GUI** è la pagina web che mostra graficamente e in tempo reale, lo stato del deposito. Si noti che non è previsto di poter visualizzare i container, ne le informazioni relative ai prodotti al loro inerno.
 
+(
+    la posizione del robot non fa parte dello stato del deposito, quest'ultimo sembra quindi comprendere solamente:
+    - io-port libera/occupata
+    - slot liberi/occupati
+    - peso raggiunto
 
-
-
+    sembrano essere lasciati a nostra discrezione altri dettagli come:
+    - pid del prodotto che occupa un determinato container
+    - intervento di carico in corso
+    - qualsiasi altra cosa che può venire in mente    
+)
 
 
 
@@ -261,11 +269,13 @@ Infine, la **dynamically updated web GUI** è la pagina web che mostra graficame
 ## Macrocomponenti (la roba tra parentesi quadre serve solo per fare mente locale, non va lasciata)
 //Il sistema deve essere distribuito su N nodi computazionali diversi???
 (Proposta:
-potenzialmente ognuno dei macrocomponenti del sistema può essere distribuito su un nodo fisico distinto, tuttavia, decidere il grado di distribuzione del sitema durante lo sprint 0 risulta prematuro, per questo motivo si rimanda questa decisione dopo aver effettuato le analisi del problema nei prossimi sprint.
+    potenzialmente ognuno dei macrocomponenti del sistema può essere distribuito su un nodo fisico distinto, tuttavia, decidere il grado di distribuzione del sistema durante lo sprint 0 risulta prematuro, per questo motivo si rimanda questa decisione dopo aver effettuato le analisi del problema nei prossimi sprint. 
 
-Fanno eccezione i componenti che modellano un'entità reale, il deployment di quest'ultimi va per forza effettuato sul nodo fisico in cui sono presenti i sensori/attuatori da comandare. Per questo motivo si può già dallo sprint 0 affermare che _sonar_ e _led_ risiederanno su un nodo fisico distinto rispetto al resto del sistema (anche lo stesso). 
+    // l'aver modellato quasi tutto ad attori ha come pregio il poter distribuire o concentrare facilmente il sistema
 
-In futuro, anche il componente che comanderà il _DDR_ fisico (sostituendo l'attuale _basicrobot_) dovrà per gli stessi motivi essere distribuito su un nodo fisico a se stante.
+    Fanno eccezione i componenti che modellano un'entità reale, il deployment di quest'ultimi va per forza effettuato sul nodo fisico in cui sono presenti i sensori/attuatori da comandare. Per questo motivo si può già affermare dallo sprint0 che _sonar_ e _led_ risiederanno su un nodo fisico distinto rispetto al resto del sistema (anche lo stesso). 
+
+    In futuro, anche il componente che comanderà il _DDR_ fisico (sostituendo l'attuale _basicrobot_) dovrà per gli stessi motivi essere distribuito su un nodo fisico a se stante.
 )
 
 
@@ -275,6 +285,7 @@ Segue l'elenco dei macrocomponenti software del sistema:
     - [riceve eventi riguardo alla presenza/assenza di container da sonarservice]
     - [manda query a product service per recuperare il peso del prodotto da caricare]
     - [comunica con holdservice per recuperare il prossimo slot libero e per occuparlo]
+- client di cargoservice
 - productservice
     - [registra i prodotti]
     - [riceve richieste di registrazione da clienti esterni al sistema]
@@ -310,22 +321,21 @@ I requisiti non specificano la maggior parte delle interazioni tra i componenti 
 
 
 ```text
-    <inserire qui request e response>
+    Request load_product  : load_product(PID)
+    Reply   load_accepted : load_accepted(SLOT) for load_product 
+    Reply   load_refused  : load_refused(CAUSA) for load_product 
 ```
 
-```text
-    <inserire qui request e response>
-```
 
 ### Diagramma dell'Architettura
 
 Il seguente diagramma rappresenta l'architettura iniziale di riferimento per lo sprint 1.
 
-![Errore Caricamento Diagramma Architettura Riferimento](architettura-riferimento.png)
+![Errore Caricamento Diagramma Architettura Riferimento](arch0.png)
 
 ## Piano di Test
 
-E' disponibile il [riferimanto al codice dei test](./nonloso).
+E' disponibile il [riferimento al codice dei test](./nonloso).
 
 ### Test di Sistema
 
@@ -338,13 +348,11 @@ Scenario di test 1: richiesta di intervento di carico accettata da cargoservice
     <inserire qui il codice dello es. richiesta di carico con peso massimo già raggiunto>
 ```
 
-Scenario di test 2: richiesta di intervento di carico rifiutata a causa di altro intervento di carico in corso
+Scenario di test 2: doppia richiesta di intervento di carico accettata 
 
 Scenario di test 3: richiesta di intervento di carico rifiutata a causa della mancanza di slot libero
 
-Scenario di test 4: richiesta di intervento di carico rifiutata a causa dell'assenza del prodotto nel db gestito da productservice
-
-Scenario di test 5: richiesta di intervento di carico rifiutata a causa del peso eccessivo del container
+Scenario di test 4: richiesta di intervento di carico rifiutata a causa del peso eccessivo del container
 
 ## Piano di Lavoro
 
