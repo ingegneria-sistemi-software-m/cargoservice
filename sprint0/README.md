@@ -307,6 +307,14 @@ Il seguente diagramma rappresenta l'architettura iniziale di riferimento per lo 
 
 ![Errore Caricamento Diagramma Architettura Riferimento](arch0.png)
 
+
+
+
+<div class="page-break"></div>
+
+
+
+
 ## Piano di Test
 
 E' disponibile il [riferimento al codice dei test](./system0/src/test/java/CargoServiceTest.java).
@@ -421,6 +429,10 @@ Scenario di test 4: Richiesta di intervento di carico rifiutata a causa del peso
                  response.contains("overweight"));
     }
 ```
+
+
+<div class="page-break"></div>
+
 
 ## Piano di Lavoro
 
