@@ -13,7 +13,7 @@
 
 ## Obiettivi
 
-L'obiettivo prinicipale dello sprint 0 è analizzare i [requisiti](../requirements/) forniti dal committente riguardo al progetto **TemaFinale25** eliminando eventuali ambiguità relative ai termini utilizzati e formalizzando quest'ultimi con dei componenti software (che possono essere già sviluppati o ancora da sviluppare).  
+L'obiettivo prinicipale dello sprint 0 è analizzare i [requisiti](https://github.com/ingegneria-sistemi-software-m/cargoservice/blob/master/requirements/README.md) forniti dal committente riguardo al progetto **TemaFinale25** eliminando eventuali ambiguità relative ai termini utilizzati e formalizzando quest'ultimi con dei componenti software (che possono essere già sviluppati o ancora da sviluppare).  
 
 Una volta formalizzati i requisiti si procederà con la definizione di una prima **architettura logica generale del sistema** che sarà il riferimento iniziale per lo sprint 1.  
 
@@ -27,7 +27,7 @@ Inoltre, in questa sezione si deciderà come suddividere il lavoro tra i membri 
 
 ## Requisiti
 
-I requisiti sono descritti dal committente nel documento: [documento dei requisiti](../requirements/). 
+I requisiti sono descritti dal committente nel documento: [documento dei requisiti](https://github.com/ingegneria-sistemi-software-m/cargoservice/blob/master/requirements/README.md). 
 
 ## Vocabolario
 
@@ -78,7 +78,7 @@ Abbiamo quindi che un prodotto è una entità passiva modellabile come un POJO c
 - ed un PID: valore intero > 0.
 
 Il committente fornisce già tutto il software necessario per l'implementazione di productservice e dei prodotti.  
-In particolare il componente che implementa le funzionalità di productservice è un **attore** che si chiama (sfortunatamente) [cargoservice](.?).  
+In particolare il componente che implementa le funzionalità di productservice è un **attore** che si chiama (sfortunatamente) [cargoservice](https://github.com/ingegneria-sistemi-software-m/ingegneria-sistemi-software-m-professore/tree/main/cargoserviceQak).  
 Questo è un nome infelice in quanto coincide con quello di un altro macrocomponente del sistema; da ora in poi ci si riferirà al software che il committente ha fornito con productservice.
 
 I messaggi con cui si può interagire con productservice sono i seguenti.
@@ -107,8 +107,8 @@ Un **cargorobot** è un robot **logico** capace, **sotto richiesta**, di:
 È opportuno modellare il cargorobot come **attore** in quanto è un componente attivo che ha un proprio flusso di controllo.
 
 **Il committente fornisce del software per la modellazione del cargorobot**. In particolare:
-- l'ambiente virtuale [WEnv](.?) che simula un DDR e la stiva della nave in cui il cargorobot dovrà operare
-- un componente software chiamato [basicrobot](.?) che permette di governare un DDR virtuale all'interno di WEnv 
+- l'ambiente virtuale [WEnv](https://github.com/ingegneria-sistemi-software-m/ingegneria-sistemi-software-m-professore/blob/main/iss25Material/docs/_build/html/VirtualRobot23.html) che simula un DDR e la stiva della nave in cui il cargorobot dovrà operare
+- un componente software chiamato [basicrobot](https://github.com/anatali/issLab2025/blob/main/iss25Material/docs/_build/html/BasicRobot24.html) che permette di governare un DDR virtuale all'interno di WEnv 
 
 L'ambiente virtuale **WEnv** modella la tipica stiva della nave in cui dovrà andare ad operare il cargorobot e include un simulatore di DDR.
 
