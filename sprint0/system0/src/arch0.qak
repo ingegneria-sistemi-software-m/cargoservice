@@ -1,6 +1,5 @@
 System arch0
 
-
 Request load_product  : load_product(PID) 			    	 "la richiesta di carico di un container che arriva a cargoservice: contiene il PID del prodotto"
 Reply   load_accepted : load_accepted(SLOT) for load_product "la richiesta di carico può essere accettata, con restituzione dello slot assegnato al container"
 Reply   load_refused  : load_refused(CAUSA) for load_product "la richiesta di carico può essere rifiutata per vari motivi (peso, slot occupati, PID inesistente)"
@@ -10,10 +9,10 @@ Context ctx_cargoservice 			ip [host="localhost" port=8000]
 Context ctx_cargoservice_clients 	ip [host="localhost" port=9000]
 Context ctx_iodevices 				ip [host="localhost" port=8001]
 
- 
+
 QActor cargoservice context ctx_cargoservice {
 	[#
-		// stato e costanti
+		// stato e costanti 
 	#] 
 	
 	State s0 initial{

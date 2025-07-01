@@ -251,7 +251,7 @@ Si occupa di orchestrare gli altri componenti del sistema per decidere:
 - dove e quando spostare il cargorobot,
 - di interrompere tutte le attività quando si accorge di un malfunzionamento del sonar.
 
-Modellare il cargoservice come **attore** è una scelta naturale naturale in quanto oltre ad essere un componente attivo, è anche un componente **reattivo** rispetto agli eventi del sonar.
+Modellare il cargoservice come **attore** è una scelta naturale in quanto oltre ad essere un componente attivo, è anche un componente **reattivo** rispetto agli eventi del sonar.
 
 La **dynamically updated web GUI** è la pagina web che mostra graficamente e in tempo reale, lo stato del deposito.  
 Si noti che non è previsto di poter visualizzare i container, ne le informazioni relative ai prodotti al loro inerno.  
@@ -317,7 +317,7 @@ Il seguente diagramma rappresenta l'architettura iniziale di riferimento per lo 
 
 ## Piano di Test
 
-E' disponibile il [riferimento al codice dei test](./system0/src/test/java/CargoServiceTest.java).
+E' disponibile il [riferimento al codice dei test](https://github.com/ingegneria-sistemi-software-m/cargoservice/blob/master/sprint0/system0/src/test/java/CargoServiceTest.java).
 
 ### Test di Sistema
 

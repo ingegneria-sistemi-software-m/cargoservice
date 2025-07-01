@@ -30,7 +30,7 @@ class Cargoservice ( name: String, scope: CoroutineScope, isconfined: Boolean=fa
 		//val interruptedStateTransitions = mutableListOf<Transition>()
 		//IF actor.withobj !== null val actor.withobj.name» = actor.withobj.method»ENDIF
 		
-				// stato e costanti
+				// stato e costanti 
 		return { //this:ActionBasciFsm
 				state("s0") { //this:State
 					action { //it:State
