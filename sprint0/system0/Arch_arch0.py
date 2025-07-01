@@ -32,10 +32,8 @@ with Diagram('arch0Arch', show=False, outformat='png', graph_attr=graphattr) as 
           productservice=Custom('productservice','./qakicons/symActorWithobjSmall.png')
           hold=Custom('hold','./qakicons/symActorWithobjSmall.png')
           webgui=Custom('webgui','./qakicons/symActorWithobjSmall.png')
-     with Cluster('ctx_cargoservice_clients', graph_attr=nodeattr):
-          external_client=Custom('external_client','./qakicons/symActorWithobjSmall.png')
-     with Cluster('ctx_iodevices', graph_attr=nodeattr):
           sonar=Custom('sonar','./qakicons/symActorWithobjSmall.png')
           led=Custom('led','./qakicons/symActorWithobjSmall.png')
+          external_client=Custom('external_client','./qakicons/symActorWithobjSmall.png')
      external_client >> Edge(color='magenta', style='solid', decorate='true', label='<load_product<font color="darkgreen"> load_accepted load_refused</font> &nbsp; >',  fontcolor='magenta') >> cargoservice
 diag

@@ -1,0 +1,101 @@
+System arch0
+
+Request load_product  : load_product(PID) 			    	 "la richiesta di carico di un container che arriva a cargoservice: contiene il PID del prodotto"
+Reply   load_accepted : load_accepted(SLOT) for load_product "la richiesta di carico può essere accettata, con restituzione dello slot assegnato al container"
+Reply   load_refused  : load_refused(CAUSA) for load_product "la richiesta di carico può essere rifiutata per vari motivi (peso, slot occupati, PID inesistente)"
+
+
+Context ctx_cargoservice 			ip [host="localhost" port=8000]
+//Context ctx_cargoservice_clients 	ip [host="localhost" port=9000]
+//Context ctx_iodevices 				ip [host="localhost" port=8001]
+
+
+QActor cargoservice context ctx_cargoservice {
+	[#
+		// stato e costanti 
+	#] 
+	
+	State s0 initial{
+		println("$name STARTS") color blue
+		
+		[#
+			// inizializzo lo stato 
+		#]
+	} 
+	Goto wait_request
+	
+	State wait_request{
+		println("$name WAITING FOR REQUEST") color blue
+	}
+	Transition t0
+	   whenRequest load_product -> serve_load_request
+	
+	// prima di questo dovrei
+	// - fare una query a productservice per recuperare il peso del prodotto
+	// - fare dei controlli per vedere se rifiutare o meno la richiesta
+	// - assegnare uno slot libero alla richiesta
+	State serve_load_request {
+		println("$name SERVING REQUEST") color blue
+		
+		onMsg( load_product : load_product(PID) ) {
+			[# 
+				val pid = payloadArg(0).toInt()
+				CommUtils.outblue("requested PID: " + pid);
+			#]
+			
+			if [# (0..2).random() == 0 #] {
+				[# val SlotId = 1 #]
+				replyTo load_product with load_accepted : load_accepted($SlotId)
+			}
+			else {
+				replyTo load_product with load_refused : load_refused(rifiutato)
+			}
+		}
+	}
+	Goto wait_request
+}
+
+QActor cargorobot context ctx_cargoservice{
+  State s0 initial {
+  } 
+} 
+ 
+QActor basicrobot context ctx_cargoservice{
+  State s0 initial {
+  } 
+} 
+
+ 
+QActor productservice context ctx_cargoservice{
+  State s0 initial {
+  } 
+} 
+ 
+	
+QActor hold context ctx_cargoservice{
+  State s0 initial {
+  } 
+} 
+
+QActor webgui context ctx_cargoservice{
+ 	State s0 initial {
+  	} 
+}
+
+
+QActor sonar context ctx_cargoservice{
+ 	State s0 initial {
+  	} 
+}
+
+QActor led context ctx_cargoservice{
+ 	State s0 initial {
+  	} 
+}
+ 
+
+QActor external_client context ctx_cargoservice{
+ 	State s0 initial {
+ 		request cargoservice -m load_product: load_product(10)
+  	} 
+}

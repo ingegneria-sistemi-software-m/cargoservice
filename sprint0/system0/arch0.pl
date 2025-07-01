@@ -6,8 +6,6 @@ reply( load_accepted, load_accepted(SLOT) ). %%for load_product | la richiesta d
 reply( load_refused, load_refused(CAUSA) ). %%for load_product | la richiesta di carico può essere rifiutata per vari motivi (peso, slot occupati, PID inesistente)
 %====================================================================================
 context(ctx_cargoservice, "localhost",  "TCP", "8000").
-context(ctx_cargoservice_clients, "localhost",  "TCP", "9000").
-context(ctx_iodevices, "localhost",  "TCP", "8001").
  qactor( cargoservice, ctx_cargoservice, "it.unibo.cargoservice.Cargoservice").
  static(cargoservice).
   qactor( cargorobot, ctx_cargoservice, "it.unibo.cargorobot.Cargorobot").
@@ -20,9 +18,9 @@ context(ctx_iodevices, "localhost",  "TCP", "8001").
  static(hold).
   qactor( webgui, ctx_cargoservice, "it.unibo.webgui.Webgui").
  static(webgui).
-  qactor( sonar, ctx_iodevices, "it.unibo.sonar.Sonar").
+  qactor( sonar, ctx_cargoservice, "it.unibo.sonar.Sonar").
  static(sonar).
-  qactor( led, ctx_iodevices, "it.unibo.led.Led").
+  qactor( led, ctx_cargoservice, "it.unibo.led.Led").
  static(led).
-  qactor( external_client, ctx_cargoservice_clients, "it.unibo.external_client.External_client").
+  qactor( external_client, ctx_cargoservice, "it.unibo.external_client.External_client").
  static(external_client).

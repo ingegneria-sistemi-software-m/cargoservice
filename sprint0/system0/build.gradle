@@ -35,7 +35,7 @@ kotlin {
 
 repositories {
     mavenCentral()
-    flatDir {   dirs '../../unibolibs'	 }
+    flatDir {   dirs '../unibolibs'	 }
 }
 
 /*
@@ -151,10 +151,8 @@ application {
     //Define the main class for the application.
     mainClassName    = 'it.unibo.ctx_cargoservice.MainCtx_cargoserviceKt'
 }
-
-
-
-jar {
+ 
+ jar {
     println("building jar")
     duplicatesStrategy(DuplicatesStrategy.EXCLUDE)  //per via di locgback.xml quando si usa spring
     from sourceSets.main.allSource
@@ -187,26 +185,9 @@ task run0(type: JavaExec) {
     group = "Execution"
     description = "Run the main class with JavaExecTask"
     classpath = sourceSets.main.runtimeClasspath
-    main = 'it.unibo.ctx_iodevices.MainCtx_iodevicesKt'
-}
-
-task runCargoService(type: JavaExec) {
-    group = 'Execution'
-    description = "Run the main class with JavaExecTask"
     main = 'it.unibo.ctx_cargoservice.MainCtx_cargoserviceKt'
-    classpath = sourceSets.main.runtimeClasspath
 }
 
-task runClient(type: JavaExec) {
-    group = 'Execution'
-    description = "Run the main class with JavaExecTask"
-    main = 'it.unibo.ctx_cargoservice_clients.MainCtx_cargoservice_clientsKt'
-    classpath = sourceSets.main.runtimeClasspath
-}
-
-task runAll {
-    dependsOn runCargoService, runClient
-}
 /*
 //TODO
 tasks.register('copyReport', Copy) {
