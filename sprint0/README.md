@@ -236,7 +236,7 @@ Il sonar è infine caratterizzato da una costante chiamata **DFREE** che definis
 - la distanza massima con cui una misurazione può essere interpretata: "come assenza di container" (DFREE/2);
 - la distanza massima con cui una misurazione può essere considerata valida (DFREE).
 
-DFREE rappresenta una distanza ed è opportuno modellarla come valore rele maggiore di zero.  
+DFREE rappresenta una distanza ed è opportuno modellarla come valore reale maggiore di zero.  
 Un componente strettamente associato al sonar è il **Led**.  
 In caso di misurazioni del sonar riconducibili a malfunzionamenti di quest'ultimo, **il sistema deve accendere il led** in modo da notificare la presenza del malfunzionamento.  
 Questo è un comportamento **passivo** e pertanto modellabile tramite un POJO.  
