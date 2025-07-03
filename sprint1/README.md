@@ -25,22 +25,12 @@ Fase di analisi del problema, che termina con la definizione di
 
 
 ### Analisi cargoservice
-```
-- Deve essere raggiungibile dalle due GUI per gestirne le richieste e tenere nota di eventuali richieste sospese in attesa di risposta (Queued).
-- Deve gestire la logica dei ticket, inglobando al suo interno una base di conoscenza persistente, che corrisponde ai ticket emessi in precedenza. In questa sede, i ticket vengono semplicisticamente descritti da numeri interi.
-- Deve tenere nota dello stato della service area, inteso come posizione corrente del trolley e stato del trolley (Busy / Idle).
-
-Il principio di singola responsabilità non risulta dunque in questo stadio rispettato. Si decide di posticipare alla fase di progettazione l'eventuale risoluzione del problema. 
-
-Il comportamento della ColdStorage è schematicamente riassunto dal seguente diagramma degli stati, dettagliato in sede di analisi ed espresso dal codice sprint1Robot/src/analisi.qak:
-
-```
 // responsabilità e userstory di _cargoservice_
 // - la userstory consiste nello spiegara la lista di interazione con gli altri componenti che bisogna effettuare
 
 
 
-Come detto nello sprint0, l’attore _cargoservice_ è il componente principale del sistema. Il suo compito è quello di fare da **orchestratore**; in altre parole, deve coordinare le operazioni degli altri componenti del sistema col fine di eseguire le operazioni richieste dai requisiti nel giusto ordine.
+Come detto nello sprint0, l’attore _cargoservice_ è il componente principale del sistema. Il suo compito è quello di fare da **orchestratore**; in altre parole, deve coordinare le operazioni degli altri componenti del sistema col fine di eseguire le operazioni specificate dai requisiti nel giusto ordine.
 
 La tipica sequenza di attività del _cargoservice_ è la seguente:
 1. _cargoservice_ riceve una richiesta di carico da parte di un cliente
@@ -62,7 +52,7 @@ La tipica sequenza di attività del _cargoservice_ è la seguente:
 5. in base alle risposte di _hold_, _cargoservice_ decide se accettare o rifiutare la richiesta
     - se la richiesta viene rifiutata, si ritorna al punto 1
     - se la richiesta viene accettata, _cargoservice_ posiziona il _cargorobot_ alla _pickup-position_ davanti alla _IO-port_
-        - NOTA: dal momento dell'accettazione fino alla fine della gestione della richiesta, altre richieste di carico che arrivano nel frattempo vengono accodate. 
+        - NOTA: dal momento dell'accettazione fino alla fine della gestione della richiesta, altre richieste di carico che arrivano nel frattempo vengono **accodate**. 
         - **PUNTO APERTO: come prima, come fa cargoservice a sapere la posizione della pickup-position???**
 
 6. con il _cargorobot_ posizionato davanti all'IO-port, _cargoservice_ aspetta che il _sonar_ notifichi l'evento di arrivo del _container_. Se questo evento è gia avvenuto _cargoservice_ non ha motivo di aspettare
@@ -74,14 +64,31 @@ La tipica sequenza di attività del _cargoservice_ è la seguente:
 - depositare il container nello _slot_ prenotato
 
 8. terminato l'intervento di carico _cargoservice_ ordina al _cargorobot_ di ritornare nella _home_
-    - **NB**: il basicrobot non supporta spostamenti asincroni del robot; in altre parole, non posso interrompere il robot mentre sta tornando nella home per fargli servire altre richieste.
-    - questo non è un problema in quanto il commmittente ci ha detto che possiamo fare come ci pare... però sono triste
+    - **PUNTO APERTO: il commmittente ci ha detto che possiamo fare come ci pare per quanto riguarda il momento in cui _cargoservice_ può tornare a servire le richieste... la nostra scelta però deve essere opportunamente motivata. Cosa scegliamo???**
 
 9. una volta tornato nella home cargoservice potrà servire altre richieste
 
 
-**OPPURE**
-potrei rendere il cargorobot un po' più intelligente
+**OPPURE** potrei rendere il _cargorobot_ un po' più intelligente
+
+- punti da 1 a 4 uguali a prima
+5. se la richiesta viene accettata, _cargoservice_ può semplicemente richiedere a _cargorobot_ di gestire il container, delegando a lui tutta la logica di attesa, trasporto e deposito con una operazione del tipo **_handle_container(slot)_**
+6. quando _cargorobot_ avrà terminato la gestione del container risponderà a cargoservice rendendosi disponibile per la prossima richiesta
+
+
+considerazioni:
+- se uso un cargorobot scemo
+    - quest'ultimo non deve conoscere le coordinate delle posizioni in cui deve andare in quanto gli vengono fornite tramite i messaggi di posizionamento espliciti
+- se uso un cargorobot intelligente
+    - il cargorobot diventa un ulteriore componente che deve leggere un file di config per caricare le posizioni in cui deve andare
+    - l'abstraction gap tra i requisiti e cio che mi permette di fare il basic robot
+    - rispetto meglio il principio di singola responsabilità
+        - cargoservice si occupa solo di fare da orchestrare di vari componenti
+        - cargorobot muove il roboto 
+
+
+
+
 
 
 
@@ -117,12 +124,33 @@ La sequenza di attività suggerisce gli stati dell'attore QAK con cui modellare 
 
 
 ### Analisi cargorobot
-// responsabilità e userstory di cargorobot 
+// responsabilità e userstory di cargorobot
 
-**PUNTO APERTO**: in un qualsiasi momento l'attività del cargorobot può essere interrotta. Questo è problematico in quanto il basicrobot come detto sopra supporta solo spostamenti sincroni. Mi tocca estendere modificare il basicrobot?
+Durante l'analisi dei requisiti si è detto che il _cargorobot_ è il componente responsabile del comando del DDR. Il _cargorobot_ si interfaccia con il _basicrobot_ (fornito dal committente) per muovere il DDR. Estendendo le funzionalità del _basicrobot_ **colma l'abstraction gap** tra quest'ultimo e i requisiti.
+
+L'analisi dei requisiti e l'analisi di _cargoservice_ hanno già delineato in parte la sequenza di attività del _cargorobot_:
+1. _cargorobot_ riceve da _cargoservice_ una richiesta di gestione di un container
+2. _cargorobot_ si dirige verso la pickup-position e aspetta che arrivi il container
+    - **PUNTO APERTO: chi è che ascolta il sonar e aggiorna lo stato di cargorobot per confermare la presenza del container???** 
+3. _cargorobot_ :
+    - recupera il container
+    - trasporta il container allo _slot_ prenotato (si posizione nella corretta _laydown-position_)
+    - deposita il container nello _slot_ prenotato
+4. terminato l'intervento di carico, _cargorobot_ può ritornare alla _home_ rispondendo a _cargoservice_ del successo del suo intervento di carico
+    - **NB**: da questo momento in poi _cargoservice_ torna ad essere recettivo a richieste di carico da parte dei clienti 
+    - **NB2**: da questo momenti in poi _cargorobot_ torna ad essere recettivo a richieste di carico da parte di _cargoservice_
+    - **NB3**: per adesso non c'è nessun motivo di fallimento per il cargorobot (timeout??) e quindi la risposta serve solo a sincronizzare _cargoservice_ e _cargorobot_
+    
+**NB**: in un qualsiasi momento l'attività del cargorobot può essere interrotta. **PUNTO APERTO: come fa cargorobot a interrompersi e riprendere???**
+
+
+**(sostituire i punti aperti con domande e risposte) PUNTO APERTO: Come fa _cargorobot_ a conoscere le posizioni notevoli in cui deve andare dato il nome di uno slot?** 
+
+
 
 
 // codice qak di cargorobot
+
 
 
 
