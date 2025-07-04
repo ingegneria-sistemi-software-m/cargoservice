@@ -33,7 +33,7 @@ Fase di analisi del problema, che termina con la definizione di
 Come detto nello sprint0, l’attore _cargoservice_ è il componente principale del sistema. Il suo compito è quello di fare da **orchestratore**; in altre parole, deve coordinare le operazioni degli altri componenti del sistema col fine di eseguire le operazioni specificate dai requisiti nel giusto ordine.
 
 La tipica sequenza di attività del _cargoservice_ è la seguente:
-1. _cargoservice_ riceve una richiesta di carico da parte di un cliente
+1. _cargoservice_ **riceve una richiesta di carico** da parte di un cliente
     - la richiesta di carico contiene il PID del prodotto da caricare
 
 2. dopo aver ricevuto la richiesta di carico, _cargoservice_ fa una richiesta a _productservice_ per **recuperare il peso del prodotto da caricare** associato al PID ricevuto dal cliente.
@@ -42,7 +42,7 @@ La tipica sequenza di attività del _cargoservice_ è la seguente:
     - un errore in caso il PID inviato dal cliente non corrisponda a nessun prodotto registrato nel DB. **In questo caso _cargoservice_ può già rispondere al cliente con un opportuno messaggio di errore**. 
     - il peso del prodotto 
 
-4. dopo aver recuperato il peso del prodotto da caricare, _cargoservice_  può passare a verificare se lo stato del _deposito_ permette di soddisfare la richiesta. Si è definito nello sprint 0 che il mantenimento dello stato del _deposito_ è responsabilità del componente _hold_; di conseguenza, _cargoservice_ invierà a quest'ultimo un messaggio contenente il peso del prodotto da caricare. Si possono verificare tre casi:
+4. dopo aver recuperato il peso del prodotto da caricare, _cargoservice_  può passare a verificare se lo **stato del _deposito_ permette di soddisfare la richiesta**. Si è definito nello sprint 0 che il mantenimento dello stato del _deposito_ è responsabilità del componente _hold_; di conseguenza, _cargoservice_ invierà a quest'ultimo un messaggio contenente il peso del prodotto da caricare. Si possono verificare tre casi:
     - richiesta non soddisfacibile in quanto si eccederebbe il peso _MaxLoad_ del deposito. _Hold_ risponde con un opportuno messaggio di errore.
     - richiesta non soddisfacibile in quanto manca uno _slot_ libero in cui posizionare il _container_. _Hold_ risponde con un opportuno messaggio di errore.
     - richiesta soddisfacibile. _Hold_ risponde con un messaggio contenente il nome dello slot prenotato dalla richiesta corrente
@@ -185,6 +185,8 @@ Fase di progetto e realizzazione, che termina con il **deployment** del prodotto
 
 
 parla di un file di config
+
+parla di come ci si deve adattare all'interfaccia di productservice
 
 parla di eventuali classi di supporto
 

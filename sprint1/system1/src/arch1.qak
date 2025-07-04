@@ -1,0 +1,381 @@
+System arch1
+
+
+/* Messaggi per l'interazione con cargoservice */
+Request load_product  : load_product(PID) 			    	 "la richiesta di carico di un container che arriva a cargoservice: contiene il PID del prodotto"
+Reply   load_accepted : load_accepted(SLOT) for load_product "può essere accettata, con restituzione dello slot assegnato al container"
+Reply   load_refused  : load_refused(CAUSA) for load_product "può essere rifiutata per vari motivi (peso, slot occupati, PID inesistente)"
+
+/* Messaggi per l'interazione con productservice */
+Request get_weight    	   : get_weight(PID) 			    		   "query verso productservice per ottenere il peso di un prodotto. Contiene il PID del prodotto"
+Reply   get_weight_success : get_weight_success(WEIGHT) for get_weight "ha successo se il PID è presente nel DB"
+Reply   get_weight_fail    : get_weight_fail(CAUSA)     for get_weight "fallisce se il PID è inesistente"
+
+/* Messaggi per l'interazione con hold*/
+Request reserve_slot         : reserve_slot(WEIGHT) 			    	   "richiesta verso hold per prenotare uno slot. Contiene il peso del prodotto da caricare"
+Reply   reserve_slot_success : reserve_slot_success(SLOT) for reserve_slot "se la richiesta è soddisfacibile, hold restituisce il nome/id dello slot prenotato"
+Reply   reserve_slot_fail    : reserve_slot_fail(CAUSA) for reserve_slot   "fallisce se il peso supera MaxLoad oppure se non c'è uno slot libero"
+
+/* Messaggi per l'interazione con cargorobot */
+Request handle_load_operation   : handle_load_operation(SLOT) 			  				"richiesta verso cargorobot per l'intervento di carico"
+Reply   load_operation_complete : load_operation_complete(OK) for handle_load_operation "l'intervento di carico non può fallire quindi prevediamo solo una risposta"
+
+
+/* Messaggi per l'interazione con il basicrobot */
+Dispatch cmd       	: cmd(MOVE)         
+
+Dispatch end       	: end(ARG)         
+ 
+Request step       : step(TIME)	
+Reply stepdone     : stepdone(V)                 for step
+Reply stepfailed   : stepfailed(DURATION, CAUSE) for step
+
+Event  sonardata   : sonar( DISTANCE ) 	   
+Event obstacle     : obstacle(X) 
+Event info         : info(X)    
+
+Request  doplan     : doplan( PATH, STEPTIME )
+Reply doplandone    : doplandone( ARG )    for doplan
+Reply doplanfailed  : doplanfailed( ARG )  for doplan
+
+Dispatch setrobotstate: setpos(X,Y,D) //D =up|down!left|right
+
+Request engage        : engage(OWNER, STEPTIME)	
+Reply   engagedone    : engagedone(ARG)    for engage
+Reply   engagerefused : engagerefused(ARG) for engage
+
+Dispatch disengage    : disengage(ARG)
+
+Request checkowner    : checkowner(CALLER)
+Reply checkownerok    : checkownerok(ARG)      for checkowner
+Reply checkownerfailed: checkownerfailed(ARG)  for checkowner
+  
+Event alarm           : alarm(X)
+Dispatch nextmove     : nextmove(M)
+Dispatch nomoremove   : nomoremove(M)
+ 
+Dispatch setdirection : dir( D )  //D =up|down!left|right
+
+//Inglobamento endosimbitico di robotpos
+Request moverobot    :  moverobot(TARGETX, TARGETY)  
+Reply moverobotdone  :  moverobotok(ARG)                    for moverobot
+Reply moverobotfailed:  moverobotfailed(PLANDONE, PLANTODO) for moverobot
+ 
+//Richieste di info 
+Request getrobotstate : getrobotstate(ARG)
+Reply robotstate      : robotstate(POS,DIR)  for getrobotstate
+
+Request getenvmap     : getenvmap(X)
+Reply   envmap        : envmap(MAP)  for getenvmap
+
+
+
+
+
+
+Context ctx_cargoservice 			ip [host="localhost" port=8000]
+//Context ctx_cargoservice_clients 	ip [host="localhost" port=9000]
+//Context ctx_iodevices 				ip [host="localhost" port=8001]
+Context ctxbasicrobot ip [host="127.0.0.1"  port=8020   ]  
+
+ExternalQActor basicrobot context ctxbasicrobot   
+
+
+
+QActor cargoservice context ctx_cargoservice {
+	[#
+		var Cur_prod_PID = -1
+		var Cur_prod_weight = -1
+	#] 
+	
+	State s0 initial{
+		println("$name | STARTS") color blue
+		
+		[#
+			// inizializzo lo stato 
+		#]
+	} 
+	Goto wait_request
+	
+	
+	
+	/* inizio ciclo di servizio */
+	
+	State wait_request{
+		println("$name | waiting for request") color blue
+	}
+	Transition t0
+	   whenRequest load_product -> get_prod_weight
+	
+
+
+
+
+	/* Tento di recuperare il peso del prodotto richiesto */
+	
+	State get_prod_weight {
+		onMsg( load_product : load_product(PID) ) {
+			[# Cur_prod_PID = payloadArg(0).toInt() #]
+			println("$name | checking with productservice for the weight of PID: $Cur_prod_PID") color blue
+			
+			request productservice -m get_weight : get_weight($Cur_prod_PID)
+		}
+	}
+	Transition t0
+	   whenReply get_weight_success -> reserve_slot
+	   whenReply get_weight_fail	-> get_weight_fail
+	
+	
+	State get_weight_fail {
+		onMsg( get_weight_fail : get_weight_fail(CAUSA) ) {
+			[# 
+				val Causa = payloadArg(0) 
+				val CausaMsg = "Non è stato possibile recuperare il peso di PID: $Cur_prod_PID da productservice. \n\tCausa: $Causa"
+			#]
+			println("$name | $CausaMsg") color red
+			
+			replyTo load_product with load_refused : load_refused($CausaMsg)
+		}
+	}
+    Goto wait_request
+	
+	
+	
+	
+	
+	/* Tento di prenotare uno slot */
+	
+	State reserve_slot {
+		onMsg( get_weight_success : get_weight_success(PESO) ) {
+			[# 
+				Cur_prod_weight = payloadArg(0).toInt() 
+			#]
+			
+			println("$name | checking with hold if a reservation with (PID: $Cur_prod_PID, KG: $Cur_prod_weight) is possible") color blue
+			
+			request hold -m reserve_slot : reserve_slot($Cur_prod_weight)
+		}
+	}
+    Transition t0
+	   whenReply reserve_slot_success -> load_cargo
+	   whenReply reserve_slot_fail	  -> reserve_slot_fail
+    
+    State reserve_slot_fail {
+		onMsg( reserve_slot_fail : reserve_slot_fail(CAUSA) ) {
+			[# 
+				val Causa = payloadArg(0) 
+				val CausaMsg = "Non è stato possibile prenotare uno slot per (PID: $Cur_prod_PID, KG: $Cur_prod_weight). \n\tCausa: $Causa"
+			#]
+			println("$name | $CausaMsg") color red
+			
+			replyTo load_product with load_refused : load_refused($CausaMsg)
+		}
+	}
+    Goto wait_request
+	
+	
+	
+	
+	
+	/* Richiesta soddisfacibile */
+	
+	State load_cargo {
+		onMsg( reserve_slot_success : reserve_slot_success(SLOT) ) {
+			[# 
+				val Reserved_slot = payloadArg(0)
+			#]
+			
+			println("$name | product (PID: $Cur_prod_PID, KG: $Cur_prod_weight) is going to be placed in slot: $Reserved_slot") color green
+			replyTo load_product with load_accepted : load_accepted($Reserved_slot)
+
+			println("$name | waiting for load completion") color blue
+			request cargorobot -m handle_load_operation : handle_load_operation($Reserved_slot)
+		}
+	}
+    Transition t0
+	   whenReply load_operation_complete -> load_request_done
+	 
+	State load_request_done {
+		println("$name | product (PID: $Cur_prod_PID, KG: $Cur_prod_weight) successfully loaded!") color green
+	}
+	Goto wait_request
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+QActor cargorobot context ctx_cargoservice{
+	State s0 initial {
+		println("$name | STARTS") color magenta
+		println("$name | $MyName engaging ... ") color yellow 
+		request basicrobot -m engage : engage($MyName, 330) // passo configurabile?
+	}
+	Transition t0 whenReply engagedone    -> wait_request  
+ 	              whenReply engagerefused -> end
+	
+	  
+	State wait_request{
+		println("$name | waiting for request") color magenta
+	}
+	Transition t0
+	   whenRequest handle_load_operation -> go_to_io_port
+	  
+		
+	
+//	State wait_resume{
+//	}
+//	Transition t0
+//		whenMsg resume-> testMoves 
+//		
+		
+	State go_to_io_port {
+		println("$name | going to io-port") color magenta
+    	request basicrobot -m  moverobot : moverobot(4,3)
+ 	}  	
+  	Transition t0 
+  		whenReply moverobotdone   -> arrived_at_io_port
+//		whenReply moverobotfailed -> strano
+		
+	
+	
+	State arrived_at_io_port {
+		println("$name | arrived at io-port") color magenta
+		replyTo handle_load_operation with load_operation_complete : load_operation_complete(ok)
+ 	}  	
+ 	Goto load_operation_done
+//  	Transition t0 
+//  		decido se aspettare il container oppure partire subito se già presente
+	
+
+		
+   	
+	State load_operation_done {
+		println("$name | load operation completed") color magenta
+	}  	
+	Goto back_to_home
+//  	Transition t0 
+//  	// dovrei controllare se ci sono già altre richieste in coda
+  		
+  		
+  		
+  		
+  	State back_to_home {
+		println("$name | Back to home") color magenta
+		
+//		forward basicrobot -m setdirection : dir(left) // serve questo?
+		request basicrobot -m  moverobot : moverobot(0,0)
+	}  	
+  	Transition t0 
+  		whenReply moverobotdone -> atHome 
+  		
+  	State atHome{
+   		println("$name | athome") color magenta
+   		forward basicrobot -m setdirection : dir(down)
+   	}
+   	Goto wait_request
+   	
+   	
+   	
+   	
+   	State end{
+		println("$name | ENDS ") color yellow
+		[# System.exit(0) #]
+	}	
+} 
+ 
+
+
+
+
+ 
+ 
+ 
+QActor productservice context ctx_cargoservice{
+  	State s0 initial {
+		println("$name | STARTS")
+	} 
+	Goto wait_request
+	
+	
+	  
+	State wait_request{
+//		println("$name | waiting for request") color magenta
+	}
+	Transition t0
+	   whenRequest get_weight -> handle_query
+	  
+	
+	State handle_query{
+//		println("$name | loading cargo") color blue
+		
+		delay 1000
+		replyTo get_weight with get_weight_success : get_weight_success(10)
+	}
+	Goto wait_request
+} 
+ 
+	
+QActor hold context ctx_cargoservice{
+	State s0 initial {
+		println("$name | STARTS")
+	} 
+	Goto wait_request
+	
+	
+	  
+	State wait_request{
+//		println("$name | waiting for request") color magenta
+	}
+	Transition t0
+	   whenRequest reserve_slot -> handle_request
+	  
+	
+	State handle_request{
+//		println("$name | loading cargo") color blue
+		
+		delay 1000
+		replyTo reserve_slot with reserve_slot_success : reserve_slot_success(slot1)
+	}
+	Goto wait_request
+} 
+
+
+
+
+
+
+
+//QActor webgui context ctx_cargoservice{
+// 	State s0 initial {
+//  	} 
+//}
+//
+//
+//QActor sonar context ctx_cargoservice{
+// 	State s0 initial {
+//  	} 
+//}
+//
+//QActor led context ctx_cargoservice{
+// 	State s0 initial {
+//  	} 
+//}
+ 
+
+QActor external_client context ctx_cargoservice{
+ 	State s0 initial {
+ 		println("$name | STARTS") color cyan
+ 		delay 2000
+ 		println("$name | sends request") color cyan
+ 		request cargoservice -m load_product: load_product(10)
+  	} 
+}
