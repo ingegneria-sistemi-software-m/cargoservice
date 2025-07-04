@@ -214,8 +214,24 @@ QActor cargoservice context ctx_cargoservice {
 
 
 QActor cargorobot context ctx_cargoservice{
+	[#
+		// stato	
+		val Laydown_positions = hashMapOf(
+		    "slot1" to arrayOf(1, 1),
+		    "slot2" to arrayOf(1, 3),
+		    "slot3" to arrayOf(4, 1),
+		    "slot4" to arrayOf(4, 3)
+		)
+		val home 	= arrayOf(0, 0)
+		val IO_port = arrayOf(0, 4)
+		lateinit var Reserved_slot : String
+	#]
+    
 	State s0 initial {
 		println("$name | STARTS") color magenta
+		
+		// TODO: leggi config
+				
 		println("$name | $MyName engaging ... ") color yellow 
 		request basicrobot -m engage : engage($MyName, 330) // passo configurabile?
 	}
@@ -223,13 +239,44 @@ QActor cargorobot context ctx_cargoservice{
  	              whenReply engagerefused -> end
 	
 	  
+	  
+	  
+	/* inizio ciclo di servizio */
+	
 	State wait_request{
 		println("$name | waiting for request") color magenta
 	}
 	Transition t0
-	   whenRequest handle_load_operation -> go_to_io_port
+	   whenRequest handle_load_operation -> get_destination
 	  
 		
+	State get_destination {
+		onMsg( handle_load_operation : handle_load_operation(SLOT) ) {
+			[# 
+				Reserved_slot = payloadArg(0)
+//				var X = -1
+//				var Y = -1
+//				// sintassi di kotlin per controllare che la chiave sia presente nella mappa
+//				Laydown_positions[Reserved_slot]?.let { coords ->
+//				    val X = coords[0]
+//				    val Y = coords[1]
+//				}?: run {
+//				    CommUtils.outred("$name | ERROR: Unknown reserved slot '$Reserved_slot'")
+//				    System.exit(0)
+//				}
+				
+				// se no posso fare così e non controllare niente e il compilatore non si lamenta
+				val coords = Laydown_positions[Reserved_slot]!!
+				val X = coords[0]
+				val Y = coords[1]
+			#]
+			// DEBUG: 
+			println("$name | cargorobot destination is $Reserved_slot = ($X, $Y)") color magenta
+		}
+	}
+    Goto go_to_io_port
+	
+	
 	
 //	State wait_resume{
 //	}
@@ -237,42 +284,81 @@ QActor cargorobot context ctx_cargoservice{
 //		whenMsg resume-> testMoves 
 //		
 		
+		
+		
+	/* vado a prendere il container */
+	
 	State go_to_io_port {
 		println("$name | going to io-port") color magenta
-    	request basicrobot -m  moverobot : moverobot(4,3)
+		[#
+			val X = IO_port[0]
+			val Y = IO_port[1]
+		#]
+    	request basicrobot -m  moverobot : moverobot($X, $Y)
  	}  	
   	Transition t0 
   		whenReply moverobotdone   -> arrived_at_io_port
 //		whenReply moverobotfailed -> strano
 		
 	
-	
 	State arrived_at_io_port {
 		println("$name | arrived at io-port") color magenta
-		replyTo handle_load_operation with load_operation_complete : load_operation_complete(ok)
+		// TODO: togli delay e usa il messaggio del sonar
+		delay 3000
  	}  	
- 	Goto load_operation_done
+ 	Goto go_to_destination
 //  	Transition t0 
 //  		decido se aspettare il container oppure partire subito se già presente
 	
 
+
+
+	/* vado a depositare il container */
+	
+	State go_to_destination {
+		[#
+			val coords = Laydown_positions[Reserved_slot]!!
+			val X = coords[0]
+			val Y = coords[1]
+		#]
 		
+		println("$name | going to my destination: $Reserved_slot = ($X, $Y)") color magenta
+		
+    	request basicrobot -m  moverobot : moverobot($X, $Y)
+ 	}  	
+ 	Transition t0 
+ 		whenReply moverobotdone   -> arrived_at_destination
+		
+	State arrived_at_destination {
+		println("$name | arrived at destination") color magenta
+		println("$name | laying down the container") color magenta
+		delay 3000 // questo simula il tempo per lo scarico
+ 	}  	
+ 	Goto load_operation_done
+	
+   	
+   	
+   	
+   	
+   	/* torno a casa */
    	
 	State load_operation_done {
 		println("$name | load operation completed") color magenta
+		replyTo handle_load_operation with load_operation_complete : load_operation_complete(ok)
 	}  	
 	Goto back_to_home
 //  	Transition t0 
 //  	// dovrei controllare se ci sono già altre richieste in coda
   		
-  		
-  		
-  		
   	State back_to_home {
 		println("$name | Back to home") color magenta
 		
+		[#
+			val X = home[0]
+			val Y = home[1]	
+		#]
 //		forward basicrobot -m setdirection : dir(left) // serve questo?
-		request basicrobot -m  moverobot : moverobot(0,0)
+		request basicrobot -m  moverobot : moverobot($X, $Y)
 	}  	
   	Transition t0 
   		whenReply moverobotdone -> atHome 
@@ -343,7 +429,7 @@ QActor hold context ctx_cargoservice{
 //		println("$name | loading cargo") color blue
 		
 		delay 1000
-		replyTo reserve_slot with reserve_slot_success : reserve_slot_success(slot1)
+		replyTo reserve_slot with reserve_slot_success : reserve_slot_success(slot4)
 	}
 	Goto wait_request
 } 

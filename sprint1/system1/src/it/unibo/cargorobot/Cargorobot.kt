@@ -29,6 +29,17 @@ class Cargorobot ( name: String, scope: CoroutineScope, isconfined: Boolean=fals
 	override fun getBody() : (ActorBasicFsm.() -> Unit){
 		//val interruptedStateTransitions = mutableListOf<Transition>()
 		//IF actor.withobj !== null val actor.withobj.name» = actor.withobj.method»ENDIF
+		
+				// stato	
+				val Laydown_positions = hashMapOf(
+				    "slot1" to arrayOf(1, 1),
+				    "slot2" to arrayOf(1, 3),
+				    "slot3" to arrayOf(4, 1),
+				    "slot4" to arrayOf(4, 3)
+				)
+				val home 	= arrayOf(0, 0)
+				val IO_port = arrayOf(0, 4)
+				lateinit var Reserved_slot : String
 		return { //this:ActionBasciFsm
 				state("s0") { //this:State
 					action { //it:State
@@ -51,12 +62,45 @@ class Cargorobot ( name: String, scope: CoroutineScope, isconfined: Boolean=fals
 					//After Lenzi Aug2002
 					sysaction { //it:State
 					}	 	 
-					 transition(edgeName="t08",targetState="go_to_io_port",cond=whenRequest("handle_load_operation"))
+					 transition(edgeName="t08",targetState="get_destination",cond=whenRequest("handle_load_operation"))
+				}	 
+				state("get_destination") { //this:State
+					action { //it:State
+						if( checkMsgContent( Term.createTerm("handle_load_operation(SLOT)"), Term.createTerm("handle_load_operation(SLOT)"), 
+						                        currentMsg.msgContent()) ) { //set msgArgList
+								 
+												Reserved_slot = payloadArg(0)
+								//				var X = -1
+								//				var Y = -1
+								//				// sintassi di kotlin per controllare che la chiave sia presente nella mappa
+								//				Laydown_positions[Reserved_slot]?.let { coords ->
+								//				    val X = coords[0]
+								//				    val Y = coords[1]
+								//				}?: run {
+								//				    CommUtils.outred("$name | ERROR: Unknown reserved slot '$Reserved_slot'")
+								//				    System.exit(0)
+								//				}
+												
+												// se no posso fare così e non controllare niente e il compilatore non si lamenta
+												val coords = Laydown_positions[Reserved_slot]!!
+												val X = coords[0]
+												val Y = coords[1]
+								CommUtils.outmagenta("$name | cargorobot destination is $Reserved_slot = ($X, $Y)")
+						}
+						//genTimer( actor, state )
+					}
+					//After Lenzi Aug2002
+					sysaction { //it:State
+					}	 	 
+					 transition( edgeName="goto",targetState="go_to_io_port", cond=doswitch() )
 				}	 
 				state("go_to_io_port") { //this:State
 					action { //it:State
 						CommUtils.outmagenta("$name | going to io-port")
-						request("moverobot", "moverobot(4,3)" ,"basicrobot" )  
+						
+									val X = IO_port[0]
+									val Y = IO_port[1]
+						request("moverobot", "moverobot($X,$Y)" ,"basicrobot" )  
 						//genTimer( actor, state )
 					}
 					//After Lenzi Aug2002
@@ -67,7 +111,34 @@ class Cargorobot ( name: String, scope: CoroutineScope, isconfined: Boolean=fals
 				state("arrived_at_io_port") { //this:State
 					action { //it:State
 						CommUtils.outmagenta("$name | arrived at io-port")
-						answer("handle_load_operation", "load_operation_complete", "load_operation_complete(ok)"   )  
+						delay(3000) 
+						//genTimer( actor, state )
+					}
+					//After Lenzi Aug2002
+					sysaction { //it:State
+					}	 	 
+					 transition( edgeName="goto",targetState="go_to_destination", cond=doswitch() )
+				}	 
+				state("go_to_destination") { //this:State
+					action { //it:State
+						
+									val coords = Laydown_positions[Reserved_slot]!!
+									val X = coords[0]
+									val Y = coords[1]
+						CommUtils.outmagenta("$name | going to my destination: $Reserved_slot = ($X, $Y)")
+						request("moverobot", "moverobot($X,$Y)" ,"basicrobot" )  
+						//genTimer( actor, state )
+					}
+					//After Lenzi Aug2002
+					sysaction { //it:State
+					}	 	 
+					 transition(edgeName="t010",targetState="arrived_at_destination",cond=whenReply("moverobotdone"))
+				}	 
+				state("arrived_at_destination") { //this:State
+					action { //it:State
+						CommUtils.outmagenta("$name | arrived at destination")
+						CommUtils.outmagenta("$name | laying down the container")
+						delay(3000) 
 						//genTimer( actor, state )
 					}
 					//After Lenzi Aug2002
@@ -78,6 +149,7 @@ class Cargorobot ( name: String, scope: CoroutineScope, isconfined: Boolean=fals
 				state("load_operation_done") { //this:State
 					action { //it:State
 						CommUtils.outmagenta("$name | load operation completed")
+						answer("handle_load_operation", "load_operation_complete", "load_operation_complete(ok)"   )  
 						//genTimer( actor, state )
 					}
 					//After Lenzi Aug2002
@@ -88,13 +160,16 @@ class Cargorobot ( name: String, scope: CoroutineScope, isconfined: Boolean=fals
 				state("back_to_home") { //this:State
 					action { //it:State
 						CommUtils.outmagenta("$name | Back to home")
-						request("moverobot", "moverobot(0,0)" ,"basicrobot" )  
+						
+									val X = home[0]
+									val Y = home[1]	
+						request("moverobot", "moverobot($X,$Y)" ,"basicrobot" )  
 						//genTimer( actor, state )
 					}
 					//After Lenzi Aug2002
 					sysaction { //it:State
 					}	 	 
-					 transition(edgeName="t010",targetState="atHome",cond=whenReply("moverobotdone"))
+					 transition(edgeName="t011",targetState="atHome",cond=whenReply("moverobotdone"))
 				}	 
 				state("atHome") { //this:State
 					action { //it:State

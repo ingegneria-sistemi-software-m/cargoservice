@@ -47,7 +47,7 @@ class Productservice ( name: String, scope: CoroutineScope, isconfined: Boolean=
 					//After Lenzi Aug2002
 					sysaction { //it:State
 					}	 	 
-					 transition(edgeName="t011",targetState="handle_query",cond=whenRequest("get_weight"))
+					 transition(edgeName="t012",targetState="handle_query",cond=whenRequest("get_weight"))
 				}	 
 				state("handle_query") { //this:State
 					action { //it:State

@@ -47,12 +47,12 @@ class Hold ( name: String, scope: CoroutineScope, isconfined: Boolean=false, isd
 					//After Lenzi Aug2002
 					sysaction { //it:State
 					}	 	 
-					 transition(edgeName="t012",targetState="handle_request",cond=whenRequest("reserve_slot"))
+					 transition(edgeName="t013",targetState="handle_request",cond=whenRequest("reserve_slot"))
 				}	 
 				state("handle_request") { //this:State
 					action { //it:State
 						delay(1000) 
-						answer("reserve_slot", "reserve_slot_success", "reserve_slot_success(slot1)"   )  
+						answer("reserve_slot", "reserve_slot_success", "reserve_slot_success(slot4)"   )  
 						//genTimer( actor, state )
 					}
 					//After Lenzi Aug2002
