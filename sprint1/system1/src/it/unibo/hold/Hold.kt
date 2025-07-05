@@ -29,6 +29,8 @@ class Hold ( name: String, scope: CoroutineScope, isconfined: Boolean=false, isd
 	override fun getBody() : (ActorBasicFsm.() -> Unit){
 		//val interruptedStateTransitions = mutableListOf<Transition>()
 		//IF actor.withobj !== null val actor.withobj.name» = actor.withobj.method»ENDIF
+		 
+				var Counter = 0
 		return { //this:ActionBasciFsm
 				state("s0") { //this:State
 					action { //it:State
@@ -47,12 +49,29 @@ class Hold ( name: String, scope: CoroutineScope, isconfined: Boolean=false, isd
 					//After Lenzi Aug2002
 					sysaction { //it:State
 					}	 	 
-					 transition(edgeName="t013",targetState="handle_request",cond=whenRequest("reserve_slot"))
+					 transition(edgeName="t046",targetState="handle_request",cond=whenRequest("reserve_slot"))
 				}	 
 				state("handle_request") { //this:State
 					action { //it:State
+						CommUtils.outyellow("$name | slot counter $Counter")
 						delay(1000) 
-						answer("reserve_slot", "reserve_slot_success", "reserve_slot_success(slot4)"   )  
+						if(  Counter == 0  
+						 ){answer("reserve_slot", "reserve_slot_success", "reserve_slot_success(slot4)"   )  
+						}
+						if(  Counter == 1  
+						 ){answer("reserve_slot", "reserve_slot_success", "reserve_slot_success(slot3)"   )  
+						}
+						if(  Counter == 2  
+						 ){answer("reserve_slot", "reserve_slot_success", "reserve_slot_success(slot2)"   )  
+						}
+						if(  Counter == 3  
+						 ){answer("reserve_slot", "reserve_slot_success", "reserve_slot_success(slot1)"   )  
+						}
+						 
+									Counter++ 
+									
+									if(Counter == 4)
+										Counter = 0
 						//genTimer( actor, state )
 					}
 					//After Lenzi Aug2002

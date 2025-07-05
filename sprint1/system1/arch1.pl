@@ -12,6 +12,11 @@ reply( reserve_slot_success, reserve_slot_success(SLOT) ). %%for reserve_slot | 
 reply( reserve_slot_fail, reserve_slot_fail(CAUSA) ). %%for reserve_slot | fallisce se il peso supera MaxLoad oppure se non c'è uno slot libero
 request( handle_load_operation, handle_load_operation(SLOT) ). %richiesta verso cargorobot per l'intervento di carico
 reply( load_operation_complete, load_operation_complete(OK) ). %%for handle_load_operation | l'intervento di carico non può fallire quindi prevediamo solo una risposta
+event( container_arrived, container_arrived(X) ). %evento che avvisa della presenza di un container presso l'IO-port
+event( container_absent, container_absent(X) ). %evento che avvisa dell'assenza di un container presso l'IO-port
+event( interrompi_tutto, interrompi_tutto(X) ). %evento che avvisa di un malfunzionamento del sonar e che quindi costringe a interrompre tutte le attività
+event( riprendi_tutto, riprendi_tutto(X) ). %evento che avvisa del ripristino del sonar e che quindi permette di continuare tutte le attività
+dispatch( continue, continue(X) ).
 dispatch( cmd, cmd(MOVE) ).
 dispatch( end, end(ARG) ).
 request( step, step(TIME) ).
@@ -54,5 +59,7 @@ context(ctxbasicrobot, "127.0.0.1",  "TCP", "8020").
  static(productservice).
   qactor( hold, ctx_cargoservice, "it.unibo.hold.Hold").
  static(hold).
+  qactor( sonar, ctx_cargoservice, "it.unibo.sonar.Sonar").
+ static(sonar).
   qactor( external_client, ctx_cargoservice, "it.unibo.external_client.External_client").
  static(external_client).

@@ -146,6 +146,7 @@ L'analisi dei requisiti e l'analisi di _cargoservice_ hanno già delineato in pa
 
 **(sostituire i punti aperti con domande e risposte) PUNTO APERTO: Come fa _cargorobot_ a conoscere le posizioni notevoli in cui deve andare dato il nome di uno slot?** 
 
+**PUNTO APERTO: come fa _cargorobot_ a sapere se il container è già presente all'IO-port o no?**
 
 
 

@@ -30,9 +30,16 @@ with Diagram('arch1Arch', show=False, outformat='png', graph_attr=graphattr) as 
           cargorobot=Custom('cargorobot','./qakicons/symActorWithobjSmall.png')
           productservice=Custom('productservice','./qakicons/symActorWithobjSmall.png')
           hold=Custom('hold','./qakicons/symActorWithobjSmall.png')
+          sonar=Custom('sonar','./qakicons/symActorWithobjSmall.png')
           external_client=Custom('external_client','./qakicons/symActorWithobjSmall.png')
      with Cluster('ctxbasicrobot', graph_attr=nodeattr):
           basicrobot=Custom('basicrobot(ext)','./qakicons/externalQActor.png')
+     sys >> Edge( label='container_arrived', **evattr, decorate='true', fontcolor='darkgreen') >> cargorobot
+     cargorobot >> Edge( label='alarm', **eventedgeattr, decorate='true', fontcolor='red') >> sys
+     sys >> Edge( label='riprendi_tutto', **evattr, decorate='true', fontcolor='darkgreen') >> cargorobot
+     sonar >> Edge( label='container_arrived', **eventedgeattr, decorate='true', fontcolor='red') >> sys
+     sonar >> Edge( label='interrompi_tutto', **eventedgeattr, decorate='true', fontcolor='red') >> sys
+     sonar >> Edge( label='riprendi_tutto', **eventedgeattr, decorate='true', fontcolor='red') >> sys
      cargorobot >> Edge(color='magenta', style='solid', decorate='true', label='<engage<font color="darkgreen"> engagedone engagerefused</font> &nbsp; moverobot<font color="darkgreen"> moverobotdone moverobotfailed</font> &nbsp; >',  fontcolor='magenta') >> basicrobot
      external_client >> Edge(color='magenta', style='solid', decorate='true', label='<load_product<font color="darkgreen"> load_accepted load_refused</font> &nbsp; >',  fontcolor='magenta') >> cargoservice
      cargoservice >> Edge(color='magenta', style='solid', decorate='true', label='<get_weight<font color="darkgreen"> get_weight_success get_weight_fail</font> &nbsp; >',  fontcolor='magenta') >> productservice

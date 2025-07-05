@@ -30,16 +30,22 @@ class Cargorobot ( name: String, scope: CoroutineScope, isconfined: Boolean=fals
 		//val interruptedStateTransitions = mutableListOf<Transition>()
 		//IF actor.withobj !== null val actor.withobj.name» = actor.withobj.method»ENDIF
 		
-				// stato	
-				val Laydown_positions = hashMapOf(
-				    "slot1" to arrayOf(1, 1),
-				    "slot2" to arrayOf(1, 3),
-				    "slot3" to arrayOf(4, 1),
-				    "slot4" to arrayOf(4, 3)
+				// stato
+				val positions = hashMapOf(
+					"home"    	to arrayOf(0, 0),
+					"io_port" 	to arrayOf(0, 4),
+				    "slot1"   	to arrayOf(1, 1),
+				    "slot2" 	to arrayOf(1, 3),
+				    "slot3" 	to arrayOf(4, 1),
+				    "slot4" 	to arrayOf(4, 3)
 				)
-				val home 	= arrayOf(0, 0)
-				val IO_port = arrayOf(0, 4)
+		
+				lateinit var Destination : String
 				lateinit var Reserved_slot : String
+				
+				var moving 	= false
+				
+				var container_present = false
 		return { //this:ActionBasciFsm
 				state("s0") { //this:State
 					action { //it:State
@@ -57,130 +63,240 @@ class Cargorobot ( name: String, scope: CoroutineScope, isconfined: Boolean=fals
 				state("wait_request") { //this:State
 					action { //it:State
 						CommUtils.outmagenta("$name | waiting for request")
+						 moving = false  
 						//genTimer( actor, state )
 					}
 					//After Lenzi Aug2002
 					sysaction { //it:State
 					}	 	 
-					 transition(edgeName="t08",targetState="get_destination",cond=whenRequest("handle_load_operation"))
+					 interrupthandle(edgeName="t08",targetState="wait_resume_msg",cond=whenEvent("interrompi_tutto"),interruptedStateTransitions)
+					interrupthandle(edgeName="t09",targetState="container_arrived_handler",cond=whenEvent("container_arrived"),interruptedStateTransitions)
+					interrupthandle(edgeName="t010",targetState="container_absent_handler",cond=whenEvent("container_absent"),interruptedStateTransitions)
+					transition(edgeName="t011",targetState="go_to_io_port",cond=whenRequest("handle_load_operation"))
 				}	 
-				state("get_destination") { //this:State
+				state("go_to_io_port") { //this:State
 					action { //it:State
 						if( checkMsgContent( Term.createTerm("handle_load_operation(SLOT)"), Term.createTerm("handle_load_operation(SLOT)"), 
 						                        currentMsg.msgContent()) ) { //set msgArgList
 								 
 												Reserved_slot = payloadArg(0)
-								//				var X = -1
-								//				var Y = -1
-								//				// sintassi di kotlin per controllare che la chiave sia presente nella mappa
-								//				Laydown_positions[Reserved_slot]?.let { coords ->
-								//				    val X = coords[0]
-								//				    val Y = coords[1]
-								//				}?: run {
-								//				    CommUtils.outred("$name | ERROR: Unknown reserved slot '$Reserved_slot'")
-								//				    System.exit(0)
-								//				}
-												
-												// se no posso fare così e non controllare niente e il compilatore non si lamenta
-												val coords = Laydown_positions[Reserved_slot]!!
+																
+												// il doppio !! serve a dire al compilatore Kotlin di stare tranquillo 
+												// e di recuperare il valore dalla mappa anche senza fare dei null-check
+												val coords = positions[Reserved_slot]!!
 												val X = coords[0]
 												val Y = coords[1]
-								CommUtils.outmagenta("$name | cargorobot destination is $Reserved_slot = ($X, $Y)")
+								CommUtils.outmagenta("$name | cargorobot reserved_slot is $Reserved_slot = ($X, $Y)")
+						}
+						CommUtils.outmagenta("$name | going to io-port")
+						
+									// aggiorno la mia destinazione per ricordarmi dove devo andare in caso di interruzioni
+									Destination = "io_port"
+									
+									val coords = positions[Destination]!!
+									val X = coords[0]
+									val Y = coords[1]
+						request("moverobot", "moverobot($X,$Y)" ,"basicrobot" )  
+						 moving = true  
+						//genTimer( actor, state )
+					}
+					//After Lenzi Aug2002
+					sysaction { //it:State
+					}	 	 
+					 interrupthandle(edgeName="t012",targetState="wait_resume_msg",cond=whenEvent("interrompi_tutto"),interruptedStateTransitions)
+					interrupthandle(edgeName="t013",targetState="container_arrived_handler",cond=whenEvent("container_arrived"),interruptedStateTransitions)
+					interrupthandle(edgeName="t014",targetState="container_absent_handler",cond=whenEvent("container_absent"),interruptedStateTransitions)
+					transition(edgeName="t015",targetState="arrived_at_io_port",cond=whenReply("moverobotdone"))
+				}	 
+				state("arrived_at_io_port") { //this:State
+					action { //it:State
+						CommUtils.outmagenta("$name | arrived at io-port")
+						 moving = false  
+						if(  container_present  
+						 ){ container_present = false  
+						forward("continue", "continue(si)" ,name ) 
 						}
 						//genTimer( actor, state )
 					}
 					//After Lenzi Aug2002
 					sysaction { //it:State
 					}	 	 
-					 transition( edgeName="goto",targetState="go_to_io_port", cond=doswitch() )
+					 interrupthandle(edgeName="t016",targetState="wait_resume_msg",cond=whenEvent("interrompi_tutto"),interruptedStateTransitions)
+					transition(edgeName="t017",targetState="pick_up_container",cond=whenDispatch("continue"))
+					transition(edgeName="t018",targetState="pick_up_container",cond=whenEvent("container_arrived"))
 				}	 
-				state("go_to_io_port") { //this:State
+				state("pick_up_container") { //this:State
 					action { //it:State
-						CommUtils.outmagenta("$name | going to io-port")
-						
-									val X = IO_port[0]
-									val Y = IO_port[1]
-						request("moverobot", "moverobot($X,$Y)" ,"basicrobot" )  
-						//genTimer( actor, state )
-					}
-					//After Lenzi Aug2002
-					sysaction { //it:State
-					}	 	 
-					 transition(edgeName="t09",targetState="arrived_at_io_port",cond=whenReply("moverobotdone"))
-				}	 
-				state("arrived_at_io_port") { //this:State
-					action { //it:State
-						CommUtils.outmagenta("$name | arrived at io-port")
+						CommUtils.outmagenta("$name | picking up container")
+						 moving = false  
 						delay(3000) 
+						forward("continue", "continue(si)" ,name ) 
 						//genTimer( actor, state )
 					}
 					//After Lenzi Aug2002
 					sysaction { //it:State
 					}	 	 
-					 transition( edgeName="goto",targetState="go_to_destination", cond=doswitch() )
+					 interrupthandle(edgeName="t019",targetState="wait_resume_msg",cond=whenEvent("interrompi_tutto"),interruptedStateTransitions)
+					interrupthandle(edgeName="t020",targetState="container_arrived_handler",cond=whenEvent("container_arrived"),interruptedStateTransitions)
+					interrupthandle(edgeName="t021",targetState="container_absent_handler",cond=whenEvent("container_absent"),interruptedStateTransitions)
+					transition(edgeName="t022",targetState="go_to_reserved_slot",cond=whenDispatch("continue"))
 				}	 
-				state("go_to_destination") { //this:State
+				state("go_to_reserved_slot") { //this:State
 					action { //it:State
 						
-									val coords = Laydown_positions[Reserved_slot]!!
+									// aggiorno la mia destinazione per ricordarmi dove devo andare in caso di interruzioni
+									Destination = Reserved_slot
+									
+									val coords = positions[Destination]!!
 									val X = coords[0]
 									val Y = coords[1]
-						CommUtils.outmagenta("$name | going to my destination: $Reserved_slot = ($X, $Y)")
+						CommUtils.outmagenta("$name | going to my reserved slot: $Reserved_slot = ($X, $Y)")
 						request("moverobot", "moverobot($X,$Y)" ,"basicrobot" )  
+						 moving = true  
 						//genTimer( actor, state )
 					}
 					//After Lenzi Aug2002
 					sysaction { //it:State
 					}	 	 
-					 transition(edgeName="t010",targetState="arrived_at_destination",cond=whenReply("moverobotdone"))
+					 interrupthandle(edgeName="t023",targetState="wait_resume_msg",cond=whenEvent("interrompi_tutto"),interruptedStateTransitions)
+					interrupthandle(edgeName="t024",targetState="container_arrived_handler",cond=whenEvent("container_arrived"),interruptedStateTransitions)
+					interrupthandle(edgeName="t025",targetState="container_absent_handler",cond=whenEvent("container_absent"),interruptedStateTransitions)
+					transition(edgeName="t026",targetState="arrived_at_reserved_slot",cond=whenReply("moverobotdone"))
 				}	 
-				state("arrived_at_destination") { //this:State
+				state("arrived_at_reserved_slot") { //this:State
 					action { //it:State
-						CommUtils.outmagenta("$name | arrived at destination")
+						CommUtils.outmagenta("$name | arrived at reserved slot")
+						 moving = false  
 						CommUtils.outmagenta("$name | laying down the container")
 						delay(3000) 
+						forward("continue", "continue(si)" ,name ) 
 						//genTimer( actor, state )
 					}
 					//After Lenzi Aug2002
 					sysaction { //it:State
 					}	 	 
-					 transition( edgeName="goto",targetState="load_operation_done", cond=doswitch() )
-				}	 
-				state("load_operation_done") { //this:State
-					action { //it:State
-						CommUtils.outmagenta("$name | load operation completed")
-						answer("handle_load_operation", "load_operation_complete", "load_operation_complete(ok)"   )  
-						//genTimer( actor, state )
-					}
-					//After Lenzi Aug2002
-					sysaction { //it:State
-					}	 	 
-					 transition( edgeName="goto",targetState="back_to_home", cond=doswitch() )
+					 interrupthandle(edgeName="t027",targetState="wait_resume_msg",cond=whenEvent("interrompi_tutto"),interruptedStateTransitions)
+					interrupthandle(edgeName="t028",targetState="container_arrived_handler",cond=whenEvent("container_arrived"),interruptedStateTransitions)
+					interrupthandle(edgeName="t029",targetState="container_absent_handler",cond=whenEvent("container_absent"),interruptedStateTransitions)
+					transition(edgeName="t030",targetState="back_to_home",cond=whenDispatch("continue"))
 				}	 
 				state("back_to_home") { //this:State
 					action { //it:State
+						CommUtils.outmagenta("$name | load operation completed")
+						answer("handle_load_operation", "load_operation_complete", "load_operation_complete(ok)"   )  
 						CommUtils.outmagenta("$name | Back to home")
 						
-									val X = home[0]
-									val Y = home[1]	
+									// aggiorno la mia destinazione per ricordarmi dove devo andare in caso di interruzioni
+									Destination = "home"
+									
+									val coords = positions[Destination]!!
+									val X = coords[0]
+									val Y = coords[1]
 						request("moverobot", "moverobot($X,$Y)" ,"basicrobot" )  
+						 moving = true  
 						//genTimer( actor, state )
 					}
 					//After Lenzi Aug2002
 					sysaction { //it:State
 					}	 	 
-					 transition(edgeName="t011",targetState="atHome",cond=whenReply("moverobotdone"))
+					 interrupthandle(edgeName="t031",targetState="wait_resume_msg",cond=whenEvent("interrompi_tutto"),interruptedStateTransitions)
+					interrupthandle(edgeName="t032",targetState="container_arrived_handler",cond=whenEvent("container_arrived"),interruptedStateTransitions)
+					interrupthandle(edgeName="t033",targetState="container_absent_handler",cond=whenEvent("container_absent"),interruptedStateTransitions)
+					transition(edgeName="t034",targetState="stop_going_to_home",cond=whenRequest("handle_load_operation"))
+					transition(edgeName="t035",targetState="atHome",cond=whenReply("moverobotdone"))
+				}	 
+				state("stop_going_to_home") { //this:State
+					action { //it:State
+						CommUtils.outmagenta("$name | stop going to home and start serving new request immediately")
+						emit("alarm", "alarm(blocca)" ) 
+						if( checkMsgContent( Term.createTerm("handle_load_operation(SLOT)"), Term.createTerm("handle_load_operation(SLOT)"), 
+						                        currentMsg.msgContent()) ) { //set msgArgList
+								 
+												Reserved_slot = payloadArg(0)
+																
+												// il doppio !! serve a dire al compilatore Kotlin di stare tranquillo 
+												// e di recuperare il valore dalla mappa anche senza fare dei null-check
+												val coords = positions[Reserved_slot]!!
+												val X = coords[0]
+												val Y = coords[1]
+								CommUtils.outmagenta("$name | cargorobot reserved_slot is $Reserved_slot = ($X, $Y)")
+						}
+						forward("continue", "continue(si)" ,name ) 
+						//genTimer( actor, state )
+					}
+					//After Lenzi Aug2002
+					sysaction { //it:State
+					}	 	 
+					 interrupthandle(edgeName="t036",targetState="wait_resume_msg",cond=whenEvent("interrompi_tutto"),interruptedStateTransitions)
+					interrupthandle(edgeName="t037",targetState="container_arrived_handler",cond=whenEvent("container_arrived"),interruptedStateTransitions)
+					interrupthandle(edgeName="t038",targetState="container_absent_handler",cond=whenEvent("container_absent"),interruptedStateTransitions)
+					transition(edgeName="t039",targetState="go_to_io_port",cond=whenDispatch("continue"))
 				}	 
 				state("atHome") { //this:State
 					action { //it:State
 						CommUtils.outmagenta("$name | athome")
 						forward("setdirection", "dir(down)" ,"basicrobot" ) 
+						 moving = false  
+						forward("continue", "continue(si)" ,name ) 
 						//genTimer( actor, state )
 					}
 					//After Lenzi Aug2002
 					sysaction { //it:State
 					}	 	 
-					 transition( edgeName="goto",targetState="wait_request", cond=doswitch() )
+					 interrupthandle(edgeName="t040",targetState="wait_resume_msg",cond=whenEvent("interrompi_tutto"),interruptedStateTransitions)
+					interrupthandle(edgeName="t041",targetState="container_arrived_handler",cond=whenEvent("container_arrived"),interruptedStateTransitions)
+					interrupthandle(edgeName="t042",targetState="container_absent_handler",cond=whenEvent("container_absent"),interruptedStateTransitions)
+					transition(edgeName="t043",targetState="wait_request",cond=whenDispatch("continue"))
+				}	 
+				state("wait_resume_msg") { //this:State
+					action { //it:State
+						CommUtils.outred("$name | sonar malfunzionante, mi fermo")
+						emit("alarm", "alarm(blocca)" ) 
+						//genTimer( actor, state )
+					}
+					//After Lenzi Aug2002
+					sysaction { //it:State
+					}	 	 
+					 transition(edgeName="t044",targetState="resume",cond=whenEvent("riprendi_tutto"))
+				}	 
+				state("resume") { //this:State
+					action { //it:State
+						CommUtils.outgreen("$name | riprendo")
+						if(  moving  
+						 ){
+										val coords = positions[Destination]!!
+										val X = coords[0]
+										val Y = coords[1]
+						request("moverobot", "moverobot($X,$Y)" ,"basicrobot" )  
+						}
+						returnFromInterrupt(interruptedStateTransitions)
+						//genTimer( actor, state )
+					}
+					//After Lenzi Aug2002
+					sysaction { //it:State
+					}	 	 
+				}	 
+				state("container_arrived_handler") { //this:State
+					action { //it:State
+						CommUtils.outyellow("$name | container arrivato")
+						 container_present = true  
+						returnFromInterrupt(interruptedStateTransitions)
+						//genTimer( actor, state )
+					}
+					//After Lenzi Aug2002
+					sysaction { //it:State
+					}	 	 
+				}	 
+				state("container_absent_handler") { //this:State
+					action { //it:State
+						CommUtils.outyellow("$name | container assente")
+						 container_present = false  
+						returnFromInterrupt(interruptedStateTransitions)
+						//genTimer( actor, state )
+					}
+					//After Lenzi Aug2002
+					sysaction { //it:State
+					}	 	 
 				}	 
 				state("end") { //this:State
 					action { //it:State
