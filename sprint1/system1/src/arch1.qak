@@ -232,6 +232,8 @@ QActor cargoservice context ctx_cargoservice {
 QActor cargorobot context ctx_cargoservice{
 	[#
 		// stato
+		val Step_len = 330
+		
 		val positions = hashMapOf(
 			"home"    	to arrayOf(0, 0),
 			"io_port" 	to arrayOf(0, 4),
@@ -239,6 +241,15 @@ QActor cargorobot context ctx_cargoservice{
 		    "slot2" 	to arrayOf(1, 3),
 		    "slot3" 	to arrayOf(4, 1),
 		    "slot4" 	to arrayOf(4, 3)
+		)
+		
+		val directions = hashMapOf(
+			"home"    	to "down",
+			"io_port" 	to "down",
+		    "slot1"   	to "right",
+		    "slot2" 	to "right",
+		    "slot3" 	to "left",
+		    "slot4" 	to "left"
 		)
 
 		lateinit var Destination : String
@@ -255,7 +266,7 @@ QActor cargorobot context ctx_cargoservice{
 		// TODO: leggi config
 				
 		println("$name | $MyName engaging ... ") color yellow 
-		request basicrobot -m engage : engage($MyName, 330) // durata del passo configurabile?
+		request basicrobot -m engage : engage($MyName, $Step_len) // durata del passo configurabile?
 	}
 	Transition t0
 		whenReply engagedone    -> wait_request  
@@ -345,7 +356,12 @@ QActor cargorobot context ctx_cargoservice{
 	
 	State arrived_at_io_port {
 		println("$name | arrived at io-port") color magenta
-		[# moving = false #]
+		[# 
+			moving = false
+			
+			val Direction = directions[Destination]!!
+		#]
+		forward basicrobot -m setdirection : dir($Direction)
 		
 		// se il container c'è gia mi mando un autodispatch cosi da non dover aspettare
 		if [# container_present #] {
@@ -403,7 +419,12 @@ QActor cargorobot context ctx_cargoservice{
 		
 	State arrived_at_reserved_slot {
 		println("$name | arrived at reserved slot") color magenta
-		[# moving = false #]
+		[# 
+			moving = false
+			
+			val Direction = directions[Destination]!!
+		#]
+		forward basicrobot -m setdirection : dir($Direction)
 		
 		println("$name | laying down the container") color magenta
 		delay 3000 // tempo arbitrario per scaricare il container dal cargorobot
@@ -447,7 +468,7 @@ QActor cargorobot context ctx_cargoservice{
   		whenInterruptEvent container_arrived -> container_arrived_handler
 		whenInterruptEvent container_absent  -> container_absent_handler
   		whenRequest handle_load_operation    -> stop_going_to_home
-  		whenReply moverobotdone 			 -> atHome 
+  		whenReply moverobotdone 			 -> at_home 
   		
   		
   	
@@ -485,11 +506,15 @@ QActor cargorobot context ctx_cargoservice{
   		
   		
   		
-  	State atHome{
-   		println("$name | athome") color magenta
+  	State at_home{
+   		println("$name | at home") color magenta
    		forward basicrobot -m setdirection : dir(down)
-   		[# moving = false #]
-   		
+   		[# 
+   			moving = false
+   			
+   			val Direction = directions[Destination]!!
+		#]
+		forward basicrobot -m setdirection : dir($Direction)
    		// anche se estremamente improbabile, anche durante questo mini-stato 
    		// potrebbe essere arrivata una interruzione.
 		// Mi mando un messaggio per ricordarmi che posso procedere
@@ -617,7 +642,6 @@ QActor hold context ctx_cargoservice{
 	
 	State handle_request{
 //		println("$name | loading cargo") color blue
-		println("$name | slot counter $Counter") color yellow
 		delay 1000
 		
 		if [# Counter == 0 #] {
@@ -678,10 +702,8 @@ QActor sonar context ctx_cargoservice{
   		emit container_arrived : container_arrived(si) 
   		[# counter ++ #]
  
-  		
-  		// ogni 3 container mi guasto
-  		if [# counter%3 == 0 #] {
-	  		delay 5000
+  		// mi guasto ogni tanto
+  		if [# counter%1 == 0 #] {
 //	    	println("$name | ALLARME") color red 	// DEBUG
 	 		emit interrompi_tutto : interrompi_tutto(si) 
 	 		

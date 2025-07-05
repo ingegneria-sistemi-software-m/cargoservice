@@ -47,9 +47,8 @@ class Sonar ( name: String, scope: CoroutineScope, isconfined: Boolean=false, is
 						delay(10000) 
 						emit("container_arrived", "container_arrived(si)" ) 
 						 counter ++  
-						if(  counter%3 == 0  
-						 ){delay(5000) 
-						emit("interrompi_tutto", "interrompi_tutto(si)" ) 
+						if(  counter%1 == 0  
+						 ){emit("interrompi_tutto", "interrompi_tutto(si)" ) 
 						delay(3000) 
 						emit("riprendi_tutto", "riprendi_tutto(si)" ) 
 						}

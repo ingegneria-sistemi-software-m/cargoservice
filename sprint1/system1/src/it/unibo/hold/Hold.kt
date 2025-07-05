@@ -53,7 +53,6 @@ class Hold ( name: String, scope: CoroutineScope, isconfined: Boolean=false, isd
 				}	 
 				state("handle_request") { //this:State
 					action { //it:State
-						CommUtils.outyellow("$name | slot counter $Counter")
 						delay(1000) 
 						if(  Counter == 0  
 						 ){answer("reserve_slot", "reserve_slot_success", "reserve_slot_success(slot4)"   )  

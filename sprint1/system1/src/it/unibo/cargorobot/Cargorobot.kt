@@ -31,6 +31,8 @@ class Cargorobot ( name: String, scope: CoroutineScope, isconfined: Boolean=fals
 		//IF actor.withobj !== null val actor.withobj.name» = actor.withobj.method»ENDIF
 		
 				// stato
+				val Step_len = 330
+				
 				val positions = hashMapOf(
 					"home"    	to arrayOf(0, 0),
 					"io_port" 	to arrayOf(0, 4),
@@ -38,6 +40,15 @@ class Cargorobot ( name: String, scope: CoroutineScope, isconfined: Boolean=fals
 				    "slot2" 	to arrayOf(1, 3),
 				    "slot3" 	to arrayOf(4, 1),
 				    "slot4" 	to arrayOf(4, 3)
+				)
+				
+				val directions = hashMapOf(
+					"home"    	to "down",
+					"io_port" 	to "down",
+				    "slot1"   	to "right",
+				    "slot2" 	to "right",
+				    "slot3" 	to "left",
+				    "slot4" 	to "left"
 				)
 		
 				lateinit var Destination : String
@@ -51,7 +62,7 @@ class Cargorobot ( name: String, scope: CoroutineScope, isconfined: Boolean=fals
 					action { //it:State
 						CommUtils.outmagenta("$name | STARTS")
 						CommUtils.outyellow("$name | $MyName engaging ... ")
-						request("engage", "engage($MyName,330)" ,"basicrobot" )  
+						request("engage", "engage($MyName,$Step_len)" ,"basicrobot" )  
 						//genTimer( actor, state )
 					}
 					//After Lenzi Aug2002
@@ -111,7 +122,11 @@ class Cargorobot ( name: String, scope: CoroutineScope, isconfined: Boolean=fals
 				state("arrived_at_io_port") { //this:State
 					action { //it:State
 						CommUtils.outmagenta("$name | arrived at io-port")
-						 moving = false  
+						 
+									moving = false
+									
+									val Direction = directions[Destination]!!
+						forward("setdirection", "dir($Direction)" ,"basicrobot" ) 
 						if(  container_present  
 						 ){ container_present = false  
 						forward("continue", "continue(si)" ,name ) 
@@ -166,7 +181,11 @@ class Cargorobot ( name: String, scope: CoroutineScope, isconfined: Boolean=fals
 				state("arrived_at_reserved_slot") { //this:State
 					action { //it:State
 						CommUtils.outmagenta("$name | arrived at reserved slot")
-						 moving = false  
+						 
+									moving = false
+									
+									val Direction = directions[Destination]!!
+						forward("setdirection", "dir($Direction)" ,"basicrobot" ) 
 						CommUtils.outmagenta("$name | laying down the container")
 						delay(3000) 
 						forward("continue", "continue(si)" ,name ) 
@@ -203,7 +222,7 @@ class Cargorobot ( name: String, scope: CoroutineScope, isconfined: Boolean=fals
 					interrupthandle(edgeName="t032",targetState="container_arrived_handler",cond=whenEvent("container_arrived"),interruptedStateTransitions)
 					interrupthandle(edgeName="t033",targetState="container_absent_handler",cond=whenEvent("container_absent"),interruptedStateTransitions)
 					transition(edgeName="t034",targetState="stop_going_to_home",cond=whenRequest("handle_load_operation"))
-					transition(edgeName="t035",targetState="atHome",cond=whenReply("moverobotdone"))
+					transition(edgeName="t035",targetState="at_home",cond=whenReply("moverobotdone"))
 				}	 
 				state("stop_going_to_home") { //this:State
 					action { //it:State
@@ -232,11 +251,15 @@ class Cargorobot ( name: String, scope: CoroutineScope, isconfined: Boolean=fals
 					interrupthandle(edgeName="t038",targetState="container_absent_handler",cond=whenEvent("container_absent"),interruptedStateTransitions)
 					transition(edgeName="t039",targetState="go_to_io_port",cond=whenDispatch("continue"))
 				}	 
-				state("atHome") { //this:State
+				state("at_home") { //this:State
 					action { //it:State
-						CommUtils.outmagenta("$name | athome")
+						CommUtils.outmagenta("$name | at home")
 						forward("setdirection", "dir(down)" ,"basicrobot" ) 
-						 moving = false  
+						 
+						   			moving = false
+						   			
+						   			val Direction = directions[Destination]!!
+						forward("setdirection", "dir($Direction)" ,"basicrobot" ) 
 						forward("continue", "continue(si)" ,name ) 
 						//genTimer( actor, state )
 					}
