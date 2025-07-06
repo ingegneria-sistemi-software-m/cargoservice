@@ -1,16 +1,30 @@
 # Sprint 1
 
 ## Obiettivi
-affrontare il sottoinsieme dei requisiti relativo al cargoservice 
+L'analisi dei requisiti avvenuta nello [Sprint 0](https://github.com/ingegneria-sistemi-software-m/cargoservice/tree/master/sprint0/sprint0.pdf) ha portato a definire una **prima architettura generale del sistema**. 
 
-Enunciazione esplicita dei requisiti considerati nello SPRINT
+![arch0](../sprint0/arch0.png)
 
-## requisiti
+L'obiettivo dello sprint 1 sarà affrontare il sottoinsieme dei requisiti relativi ai componenti _cargorservice_ e _cargorobot_, effettuandone l'analisi del problema e la progettazione. Particolare importanza verrà data alle **interazioni** che questi componenti dovranno avere con il resto del sistema.
 
-## Architettura di partenza
-// link allo sprint precedente
+I [requisiti](https://github.com/ingegneria-sistemi-software-m/cargoservice/tree/master/requirements) affrontati nello sprint 1 saranno i seguenti:
+- implementare un sistema che è in grado di accettare/rifiutare le richieste di carico
+- implementare un sistema in grado di effettuare un intervento di carico nella sua interezza. Questo significa in ordine:
+    - andare all'_IO-port_
+    - aspettare il _container_ se non è già presente
+    - caricare il _container_ una volta arrivato
+    - spostare il _cargorobot_ nella _laydown-position_ corretta
+    - scaricare il _container_ nello slot
+    - ritornare alla _home_
+- implementare un sistema in grado di interrompere ogni attività in caso di sonar malfunzionante, e in grado di riprendere le attività interrotte una volta risolto il guasto
+
+Va notato che i requisiti affronati in questo sprint presupporrebbere già l'implementazione di altri componenti del sistema come _hold_ e _sonar_. L'implementazione di questi componenti verrà però affrontata solamente negli sprint successivi. Per questo motivo nello sprint 1 verranno utilizzati dei **componenti mock** che simuleranno il comportamento dei componenti mancanti in **maniera, però, semplicistica**. Ad esempio, _hold_ non causerà mai il rifiuto di una richiesta di carico in quanto non terrà traccia di alcuno stato del deposito.
 
 
+
+
+
+<!--
 ## Analisi del problema
 Fase di analisi del problema, che termina con la definizione di
 - una architettura logica del sistema
@@ -18,94 +32,71 @@ Fase di analisi del problema, che termina con la definizione di
 - e alcuni significativi piani di testing.
 
 **NB**:  E’ raccomandato che i risultati di questa fase vengano presentati al committente (con opportuno appuntamento) prima della consegna finale del prodotto.
+ -->
 
 
 
 
 
-
-### Analisi cargoservice
-// responsabilità e userstory di _cargoservice_
-// - la userstory consiste nello spiegara la lista di interazione con gli altri componenti che bisogna effettuare
-
-
-
+## Analisi del problema | cargoservice
 Come detto nello sprint0, l’attore _cargoservice_ è il componente principale del sistema. Il suo compito è quello di fare da **orchestratore**; in altre parole, deve coordinare le operazioni degli altri componenti del sistema col fine di eseguire le operazioni specificate dai requisiti nel giusto ordine.
 
-La tipica sequenza di attività del _cargoservice_ è la seguente:
-1. _cargoservice_ **riceve una richiesta di carico** da parte di un cliente
+La tipica sequenza di attività di _cargoservice_ è la seguente:
+1. _cargoservice_ **riceve una richiesta di carico** da parte di un cliente.
     - la richiesta di carico contiene il PID del prodotto da caricare
 
 2. dopo aver ricevuto la richiesta di carico, _cargoservice_ fa una richiesta a _productservice_ per **recuperare il peso del prodotto da caricare** associato al PID ricevuto dal cliente.
 
 3. _cargoservice_ riceva la risposta alla sua query da _productservice_. Quest'ultima può contenere:
-    - un errore in caso il PID inviato dal cliente non corrisponda a nessun prodotto registrato nel DB. **In questo caso _cargoservice_ può già rispondere al cliente con un opportuno messaggio di errore**. 
+    - un errore in caso il PID inviato dal cliente non corrisponda a nessun prodotto registrato nel DB. **In questo caso _cargoservice_ può già rispondere al cliente con un opportuno messaggio di errore**
     - il peso del prodotto 
 
 4. dopo aver recuperato il peso del prodotto da caricare, _cargoservice_  può passare a verificare se lo **stato del _deposito_ permette di soddisfare la richiesta**. Si è definito nello sprint 0 che il mantenimento dello stato del _deposito_ è responsabilità del componente _hold_; di conseguenza, _cargoservice_ invierà a quest'ultimo un messaggio contenente il peso del prodotto da caricare. Si possono verificare tre casi:
-    - richiesta non soddisfacibile in quanto si eccederebbe il peso _MaxLoad_ del deposito. _Hold_ risponde con un opportuno messaggio di errore.
-    - richiesta non soddisfacibile in quanto manca uno _slot_ libero in cui posizionare il _container_. _Hold_ risponde con un opportuno messaggio di errore.
+    - richiesta non soddisfacibile in quanto si eccederebbe il peso _MaxLoad_ del deposito. _Hold_ risponde con un opportuno messaggio di errore
+    - richiesta non soddisfacibile in quanto manca uno _slot_ libero in cui posizionare il _container_. _Hold_ risponde con un opportuno messaggio di errore
     - richiesta soddisfacibile. _Hold_ risponde con un messaggio contenente il nome dello slot prenotato dalla richiesta corrente
-        - **PUNTO APERTO: come fa cargoservice a sapere la posizione della laydown-position dato solo il nome dello slot???**
-        - prevediamo un file di configurazione che mappa nomi e posizioni che cargoservice legge durante l'inizializzazione?
 
-5. in base alle risposte di _hold_, _cargoservice_ decide se accettare o rifiutare la richiesta
-    - se la richiesta viene rifiutata, si ritorna al punto 1
-    - se la richiesta viene accettata, _cargoservice_ posiziona il _cargorobot_ alla _pickup-position_ davanti alla _IO-port_
-        - NOTA: dal momento dell'accettazione fino alla fine della gestione della richiesta, altre richieste di carico che arrivano nel frattempo vengono **accodate**. 
-        - **PUNTO APERTO: come prima, come fa cargoservice a sapere la posizione della pickup-position???**
+5. se la richiesta viene accettata, _cargoservice_ può semplicemente richiedere a _cargorobot_ di gestire il container, delegando a lui tutta la logica di attesa, trasporto e deposito del _container_ con una operazione del tipo **_handle\_load\_operation(slot)_**. 
 
-6. con il _cargorobot_ posizionato davanti all'IO-port, _cargoservice_ aspetta che il _sonar_ notifichi l'evento di arrivo del _container_. Se questo evento è gia avvenuto _cargoservice_ non ha motivo di aspettare
-    - abbiamo dello stato che viene aggiornato dall'evento
+6. _cargoservice_ attende il completamento dell'intervento di carico da parte di _cargorobot_. Nel frattempo, eventuali altre richieste di carico vengono accodate.
 
-7. una volta ricevuto l'evento di arrivo e posizionato il _cargorobot_, _cargoservice_ può ordinare al _cargorobot_ di: 
-- recuperare il container
-- trasportare il container allo _slot_ prenotato (posizionando il _cargorobot_ nella corretta _laydown-position_)
-- depositare il container nello _slot_ prenotato
-
-8. terminato l'intervento di carico _cargoservice_ ordina al _cargorobot_ di ritornare nella _home_
-    - **PUNTO APERTO: il commmittente ci ha detto che possiamo fare come ci pare per quanto riguarda il momento in cui _cargoservice_ può tornare a servire le richieste... la nostra scelta però deve essere opportunamente motivata. Cosa scegliamo???**
-
-9. una volta tornato nella home cargoservice potrà servire altre richieste
+7. terminato l'intervento di carico, _cargorobot_ sblocca _cargoservice_ rispondendo alla sua precedente richiesta (evento di sincronizzazione). Da questo punto in poi _cargoservice_ torna a poter servire le richieste di carico.
 
 
-**OPPURE** potrei rendere il _cargorobot_ un po' più intelligente
+### Considerazioni
+Le attività che cargoservice deve effettuare non pongono particolari problemi da analizzare, si tratta solo di effettuare una serie di richieste. Tuttavia, è stata presa una decisione: quella di **rendere il _cargorobot_ "intelligente"**.
 
-- punti da 1 a 4 uguali a prima
-5. se la richiesta viene accettata, _cargoservice_ può semplicemente richiedere a _cargorobot_ di gestire il container, delegando a lui tutta la logica di attesa, trasporto e deposito con una operazione del tipo **_handle_container(slot)_**
-6. quando _cargorobot_ avrà terminato la gestione del container risponderà a cargoservice rendendosi disponibile per la prossima richiesta
+Si sarebbe potuto rendere il _cargorobot_ un mero esecutore di comandi, aggiungendo a _cargoservice_ la responsabilità di dettare la sua posizione e che cosa deve fare in ogni momento. Si è preferito, invece, rendere il _cargorobot_ più intelligente e indipendente per tre motivi principali:   
+- l'analisi del dominio effettuata nello sprint 0 ha delineato il _cargorobot_ come un componente con delle mosse più sofisticate
+- _cargoservice_ giova di un _cargorobot_ con delle mosse più sofisticate in quanto queste producono un abstraction gap minore 
+- principio di singola responsabilità: _cargoservice_ si occupa di fare solo da orchestrare mentre _cargorobot_ si occupa di effettuare le azioni del _DDR_ descritto nei requisiti  
 
 
-considerazioni:
-- se uso un cargorobot scemo
-    - quest'ultimo non deve conoscere le coordinate delle posizioni in cui deve andare in quanto gli vengono fornite tramite i messaggi di posizionamento espliciti
-- se uso un cargorobot intelligente
-    - il cargorobot diventa un ulteriore componente che deve leggere un file di config per caricare le posizioni in cui deve andare
-    - l'abstraction gap tra i requisiti e cio che mi permette di fare il basic robot
-    - rispetto meglio il principio di singola responsabilità
-        - cargoservice si occupa solo di fare da orchestrare di vari componenti
-        - cargorobot muove il roboto 
+### Nuovi Messaggi
+Nello [Sprint 0](https://github.com/ingegneria-sistemi-software-m/cargoservice/tree/master/sprint0/sprint0.pdf) si erano definiti i messaggi con cui interagire con: _cargoservice_, _productservice_ e _basicrobot_. 
+
+L'analisi della sequenza di attività del _cargoservice_ suggerisce dei nuovi messaggi. In particolare, abbiamo:
+
+
+**Messaggi per l'interazione con hold**
+```
+Request reserve_slot         : reserve_slot(WEIGHT)
+Reply   reserve_slot_success : reserve_slot_success(SLOT) for reserve_slot
+Reply   reserve_slot_fail    : reserve_slot_fail(CAUSA) for reserve_slot
+```
+
+**Messaggi per l'interazione con cargorobot**
+```
+Request handle_load_operation   : handle_load_operation(SLOT)
+Reply   load_operation_complete : load_operation_complete(OK) for handle_load_operation
+```
 
 
 
-
-
-
-
-
-
-La sequenza di attività suggerisce dei nuovi messaggi
-- hold oltre al nome dello slot è più comodo che ritorni anche la coordinata della relativa laydown-position  
-
-// cargoservice fa molta roba, questo permette di evitare dipendenze tra gli altri componenti rendendoli quindi meno intelligenti ma più generali e riutilizzabili 
-
-
-
-
+### Modello 
 La sequenza di attività suggerisce gli stati dell'attore QAK con cui modellare cargoservice
 
 
-// codice qak di cargoservice
 
 
 
@@ -123,7 +114,16 @@ La sequenza di attività suggerisce gli stati dell'attore QAK con cui modellare 
 
 
 
-### Analisi cargorobot
+
+
+
+
+
+
+
+
+
+## Analisi cargorobot
 // responsabilità e userstory di cargorobot
 
 Durante l'analisi dei requisiti si è detto che il _cargorobot_ è il componente responsabile del comando del DDR. Il _cargorobot_ si interfaccia con il _basicrobot_ (fornito dal committente) per muovere il DDR. Estendendo le funzionalità del _basicrobot_ **colma l'abstraction gap** tra quest'ultimo e i requisiti.
@@ -148,6 +148,7 @@ L'analisi dei requisiti e l'analisi di _cargoservice_ hanno già delineato in pa
 
 **PUNTO APERTO: come fa _cargorobot_ a sapere se il container è già presente all'IO-port o no?**
 
+- **PUNTO APERTO: il commmittente ci ha detto che possiamo fare come ci pare per quanto riguarda il momento in cui _cargoservice_ può tornare a servire le richieste... la nostra scelta però deve essere opportunamente motivata. Cosa scegliamo???**
 
 
 // codice qak di cargorobot
