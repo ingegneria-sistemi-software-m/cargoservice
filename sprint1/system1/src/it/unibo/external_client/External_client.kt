@@ -50,7 +50,7 @@ class External_client ( name: String, scope: CoroutineScope, isconfined: Boolean
 					//After Lenzi Aug2002
 					sysaction { //it:State
 					}	 	 
-					 transition(edgeName="t047",targetState="work2",cond=whenReply("load_accepted"))
+					 transition(edgeName="t046",targetState="work2",cond=whenReply("load_accepted"))
 				}	 
 				state("work2") { //this:State
 					action { //it:State
@@ -62,7 +62,7 @@ class External_client ( name: String, scope: CoroutineScope, isconfined: Boolean
 					//After Lenzi Aug2002
 					sysaction { //it:State
 					}	 	 
-					 transition(edgeName="t048",targetState="work3",cond=whenReply("load_accepted"))
+					 transition(edgeName="t047",targetState="work3",cond=whenReply("load_accepted"))
 				}	 
 				state("work3") { //this:State
 					action { //it:State
@@ -74,7 +74,7 @@ class External_client ( name: String, scope: CoroutineScope, isconfined: Boolean
 					//After Lenzi Aug2002
 					sysaction { //it:State
 					}	 	 
-					 transition(edgeName="t049",targetState="work4",cond=whenReply("load_accepted"))
+					 transition(edgeName="t048",targetState="work4",cond=whenReply("load_accepted"))
 				}	 
 				state("work4") { //this:State
 					action { //it:State

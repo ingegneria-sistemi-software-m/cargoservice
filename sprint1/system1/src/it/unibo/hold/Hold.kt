@@ -49,22 +49,22 @@ class Hold ( name: String, scope: CoroutineScope, isconfined: Boolean=false, isd
 					//After Lenzi Aug2002
 					sysaction { //it:State
 					}	 	 
-					 transition(edgeName="t046",targetState="handle_request",cond=whenRequest("reserve_slot"))
+					 transition(edgeName="t045",targetState="handle_request",cond=whenRequest("reserve_slot"))
 				}	 
 				state("handle_request") { //this:State
 					action { //it:State
 						delay(1000) 
 						if(  Counter == 0  
-						 ){answer("reserve_slot", "reserve_slot_success", "reserve_slot_success(slot4)"   )  
+						 ){answer("reserve_slot", "reserve_slot_success", "reserve_slot_success(slot1)"   )  
 						}
 						if(  Counter == 1  
-						 ){answer("reserve_slot", "reserve_slot_success", "reserve_slot_success(slot3)"   )  
-						}
-						if(  Counter == 2  
 						 ){answer("reserve_slot", "reserve_slot_success", "reserve_slot_success(slot2)"   )  
 						}
+						if(  Counter == 2  
+						 ){answer("reserve_slot", "reserve_slot_success", "reserve_slot_success(slot3)"   )  
+						}
 						if(  Counter == 3  
-						 ){answer("reserve_slot", "reserve_slot_success", "reserve_slot_success(slot1)"   )  
+						 ){answer("reserve_slot", "reserve_slot_success", "reserve_slot_success(slot4)"   )  
 						}
 						 
 									Counter++ 

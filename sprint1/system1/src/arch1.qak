@@ -195,9 +195,10 @@ QActor cargoservice context ctx_cargoservice {
 				val Reserved_slot = payloadArg(0)
 			#]
 			
+			// rispondo al cliente
 			println("$name | product (PID: $Cur_prod_PID, KG: $Cur_prod_weight) is going to be placed in slot: $Reserved_slot") color green
 			replyTo load_product with load_accepted : load_accepted($Reserved_slot)
-
+			// attivo il cargorobot
 			println("$name | waiting for load completion") color blue
 			request cargorobot -m handle_load_operation : handle_load_operation($Reserved_slot)
 		}
@@ -287,28 +288,6 @@ QActor cargorobot context ctx_cargoservice{
 		whenInterruptEvent container_absent  -> container_absent_handler
 		whenRequest handle_load_operation    -> go_to_io_port
 	   
-	  
-//	 TODO: se arriva un interrupt qua viene perso, meglio spostare questa roba dentro
-//	State get_reserved_slot {
-//		// giusto per essere espliciti
-//		[# moving = false #]
-//		
-//		onMsg( handle_load_operation : handle_load_operation(SLOT) ) {
-//			[# 
-//				Reserved_slot = payloadArg(0)
-//								
-//				// il doppio !! serve a dire al compilatore Kotlin di stare tranquillo 
-//				// e di recuperare il valore dalla mappa anche senza fare dei null-check
-//				val coords = positions[Reserved_slot]!!
-//				val X = coords[0]
-//				val Y = coords[1]
-//			#]
-//			// DEBUG: 
-//			println("$name | cargorobot reserved_slot is $Reserved_slot = ($X, $Y)") color magenta
-//		}
-//	}
-//    Goto go_to_io_port
-	
 	
 		
 		
@@ -363,7 +342,7 @@ QActor cargorobot context ctx_cargoservice{
 		#]
 		forward basicrobot -m setdirection : dir($Direction)
 		
-		// se il container c'è gia mi mando un autodispatch cosi da non dover aspettare
+		// se il container c'è gia, mi mando un autodispatch cosi da non dover aspettare
 		if [# container_present #] {
 			[# container_present = false #]
 			autodispatch continue : continue(si)
@@ -377,9 +356,10 @@ QActor cargorobot context ctx_cargoservice{
 
 	State pick_up_container {
 		println("$name | picking up container") color magenta
-		[# moving = false #] // giusto per essere espliciti
+		[# moving = false #] // non cambia rispetto allo stato precedente ma meglio essere espliciti
 		
 		delay 3000 // tempo arbitrario per caricare il container sul cargorobot
+		
 		// durante il carico del container potrebbe essere arrivato una interruzione,
 		// mi mando un messaggio per ricordarmi che posso procedere
 		autodispatch continue : continue(si)
@@ -426,6 +406,7 @@ QActor cargorobot context ctx_cargoservice{
 		#]
 		forward basicrobot -m setdirection : dir($Direction)
 		
+		// scarico il container
 		println("$name | laying down the container") color magenta
 		delay 3000 // tempo arbitrario per scaricare il container dal cargorobot
 		 
@@ -446,10 +427,11 @@ QActor cargorobot context ctx_cargoservice{
    	/* torno a casa */
    	
   	State back_to_home {
+  		// rispondo a cargoservice
   		println("$name | load operation completed") color magenta
 		replyTo handle_load_operation with load_operation_complete : load_operation_complete(ok)
 		
-		
+		// mi avvio verso casa
 		println("$name | Back to home") color magenta
 		[#
 			// aggiorno la mia destinazione per ricordarmi dove devo andare in caso di interruzioni
@@ -467,18 +449,20 @@ QActor cargorobot context ctx_cargoservice{
   		whenInterruptEvent interrompi_tutto  -> wait_resume_msg
   		whenInterruptEvent container_arrived -> container_arrived_handler
 		whenInterruptEvent container_absent  -> container_absent_handler
-  		whenRequest handle_load_operation    -> stop_going_to_home
-  		whenReply moverobotdone 			 -> at_home 
+		whenReply moverobotdone 			 -> at_home 
+		// TODO: questa transizione causa bug, il motivo penso sia la presenza di un messaggio spurio
+		// da qualche parte che fa partire prima del previsto una transizione
+//  		whenRequest handle_load_operation    -> stop_going_to_home // servo subito eventuali richieste in coda 
   		
-  		
-  	
-  	
+
   	State stop_going_to_home {
    		println("$name | stop going to home and start serving new request immediately") color magenta
    		emit alarm : alarm(blocca) // blocco il basicrobot
+   		[# moving = false #]
    		
-   		// aggiorno il mio slot prenotato (devo farlo qua dato che consumo
-   		// la richiesta 'handle_load_operation' prima di arrivare a 'go_to_io_port'
+   		// aggiorno il mio slot prenotato (non viene fatto in 'go_to_io_port' dato che consumo
+   		// la richiesta 'handle_load_operation' prima di arrivarci, e quindi il relativo blocco 
+   		// onMsg{} di 'go_to_io_port' non viene eseguito)
    		onMsg( handle_load_operation : handle_load_operation(SLOT) ) { 
 			[# 
 				Reserved_slot = payloadArg(0)
@@ -575,11 +559,10 @@ QActor cargorobot context ctx_cargoservice{
    	
    	
    	
-   	
    	/* esco */
    	
    	State end{
-		println("$name | ENDS ") color yellow
+		println("$name | ENDS ") color red
 		[# System.exit(0) #]
 	}	
 } 
@@ -591,8 +574,7 @@ QActor cargorobot context ctx_cargoservice{
  
  
  
- 
- 
+
  
  
  
@@ -616,6 +598,7 @@ QActor productservice context ctx_cargoservice{
 //		println("$name | loading cargo") color blue
 		
 		delay 1000
+		// risposta mock
 		replyTo get_weight with get_weight_success : get_weight_success(10)
 	}
 	Goto wait_request
@@ -634,30 +617,30 @@ QActor hold context ctx_cargoservice{
 	
 	  
 	State wait_request{
-//		println("$name | waiting for request") color magenta
+//		println("$name | waiting for request") color yellow
 	}
 	Transition t0
 	   whenRequest reserve_slot -> handle_request
 	  
 	
 	State handle_request{
-//		println("$name | loading cargo") color blue
 		delay 1000
 		
+		// risposte mock
 		if [# Counter == 0 #] {
-			replyTo reserve_slot with reserve_slot_success : reserve_slot_success(slot4)
+			replyTo reserve_slot with reserve_slot_success : reserve_slot_success(slot1)
 		} 
 		
 		if [# Counter == 1 #] {
-			replyTo reserve_slot with reserve_slot_success : reserve_slot_success(slot3)
-		}
-		
-		if [# Counter == 2 #] {
 			replyTo reserve_slot with reserve_slot_success : reserve_slot_success(slot2)
 		}
 		
+		if [# Counter == 2 #] {
+			replyTo reserve_slot with reserve_slot_success : reserve_slot_success(slot3)
+		}
+		
 		if [# Counter == 3 #] {
-			replyTo reserve_slot with reserve_slot_success : reserve_slot_success(slot1)
+			replyTo reserve_slot with reserve_slot_success : reserve_slot_success(slot4)
 		}
 		
 		[# 
@@ -694,8 +677,7 @@ QActor sonar context ctx_cargoservice{
   	} 
   	Goto work
   	
-  	
-  	
+
   	State work {
   		// ogni 10s arriva un container
   		delay 10000
@@ -727,6 +709,8 @@ QActor external_client context ctx_cargoservice{
  	State s0 initial {
  		println("$name | STARTS") color cyan
   	} Goto work1
+  	
+  	// client mock che manda 4 richieste
   	
   	State work1 {
  		println("$name | sends request") color cyan

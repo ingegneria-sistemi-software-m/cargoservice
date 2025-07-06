@@ -221,13 +221,13 @@ class Cargorobot ( name: String, scope: CoroutineScope, isconfined: Boolean=fals
 					 interrupthandle(edgeName="t031",targetState="wait_resume_msg",cond=whenEvent("interrompi_tutto"),interruptedStateTransitions)
 					interrupthandle(edgeName="t032",targetState="container_arrived_handler",cond=whenEvent("container_arrived"),interruptedStateTransitions)
 					interrupthandle(edgeName="t033",targetState="container_absent_handler",cond=whenEvent("container_absent"),interruptedStateTransitions)
-					transition(edgeName="t034",targetState="stop_going_to_home",cond=whenRequest("handle_load_operation"))
-					transition(edgeName="t035",targetState="at_home",cond=whenReply("moverobotdone"))
+					transition(edgeName="t034",targetState="at_home",cond=whenReply("moverobotdone"))
 				}	 
 				state("stop_going_to_home") { //this:State
 					action { //it:State
 						CommUtils.outmagenta("$name | stop going to home and start serving new request immediately")
 						emit("alarm", "alarm(blocca)" ) 
+						 moving = false  
 						if( checkMsgContent( Term.createTerm("handle_load_operation(SLOT)"), Term.createTerm("handle_load_operation(SLOT)"), 
 						                        currentMsg.msgContent()) ) { //set msgArgList
 								 
@@ -246,10 +246,10 @@ class Cargorobot ( name: String, scope: CoroutineScope, isconfined: Boolean=fals
 					//After Lenzi Aug2002
 					sysaction { //it:State
 					}	 	 
-					 interrupthandle(edgeName="t036",targetState="wait_resume_msg",cond=whenEvent("interrompi_tutto"),interruptedStateTransitions)
-					interrupthandle(edgeName="t037",targetState="container_arrived_handler",cond=whenEvent("container_arrived"),interruptedStateTransitions)
-					interrupthandle(edgeName="t038",targetState="container_absent_handler",cond=whenEvent("container_absent"),interruptedStateTransitions)
-					transition(edgeName="t039",targetState="go_to_io_port",cond=whenDispatch("continue"))
+					 interrupthandle(edgeName="t035",targetState="wait_resume_msg",cond=whenEvent("interrompi_tutto"),interruptedStateTransitions)
+					interrupthandle(edgeName="t036",targetState="container_arrived_handler",cond=whenEvent("container_arrived"),interruptedStateTransitions)
+					interrupthandle(edgeName="t037",targetState="container_absent_handler",cond=whenEvent("container_absent"),interruptedStateTransitions)
+					transition(edgeName="t038",targetState="go_to_io_port",cond=whenDispatch("continue"))
 				}	 
 				state("at_home") { //this:State
 					action { //it:State
@@ -266,10 +266,10 @@ class Cargorobot ( name: String, scope: CoroutineScope, isconfined: Boolean=fals
 					//After Lenzi Aug2002
 					sysaction { //it:State
 					}	 	 
-					 interrupthandle(edgeName="t040",targetState="wait_resume_msg",cond=whenEvent("interrompi_tutto"),interruptedStateTransitions)
-					interrupthandle(edgeName="t041",targetState="container_arrived_handler",cond=whenEvent("container_arrived"),interruptedStateTransitions)
-					interrupthandle(edgeName="t042",targetState="container_absent_handler",cond=whenEvent("container_absent"),interruptedStateTransitions)
-					transition(edgeName="t043",targetState="wait_request",cond=whenDispatch("continue"))
+					 interrupthandle(edgeName="t039",targetState="wait_resume_msg",cond=whenEvent("interrompi_tutto"),interruptedStateTransitions)
+					interrupthandle(edgeName="t040",targetState="container_arrived_handler",cond=whenEvent("container_arrived"),interruptedStateTransitions)
+					interrupthandle(edgeName="t041",targetState="container_absent_handler",cond=whenEvent("container_absent"),interruptedStateTransitions)
+					transition(edgeName="t042",targetState="wait_request",cond=whenDispatch("continue"))
 				}	 
 				state("wait_resume_msg") { //this:State
 					action { //it:State
@@ -280,7 +280,7 @@ class Cargorobot ( name: String, scope: CoroutineScope, isconfined: Boolean=fals
 					//After Lenzi Aug2002
 					sysaction { //it:State
 					}	 	 
-					 transition(edgeName="t044",targetState="resume",cond=whenEvent("riprendi_tutto"))
+					 transition(edgeName="t043",targetState="resume",cond=whenEvent("riprendi_tutto"))
 				}	 
 				state("resume") { //this:State
 					action { //it:State
@@ -323,7 +323,7 @@ class Cargorobot ( name: String, scope: CoroutineScope, isconfined: Boolean=fals
 				}	 
 				state("end") { //this:State
 					action { //it:State
-						CommUtils.outyellow("$name | ENDS ")
+						CommUtils.outred("$name | ENDS ")
 						 System.exit(0)  
 						//genTimer( actor, state )
 					}
