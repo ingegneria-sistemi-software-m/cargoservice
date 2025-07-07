@@ -6,10 +6,15 @@ Request load_product  : load_product(PID) 			    	 "la richiesta di carico di un
 Reply   load_accepted : load_accepted(SLOT) for load_product "può essere accettata, con restituzione dello slot assegnato al container"
 Reply   load_refused  : load_refused(CAUSA) for load_product "può essere rifiutata per vari motivi (peso, slot occupati, PID inesistente)"
 
-/* Messaggi per l'interazione con productservice */
-Request get_weight    	   : get_weight(PID) 			    		   "query verso productservice per ottenere il peso di un prodotto. Contiene il PID del prodotto"
-Reply   get_weight_success : get_weight_success(WEIGHT) for get_weight "ha successo se il PID è presente nel DB"
-Reply   get_weight_fail    : get_weight_fail(CAUSA)     for get_weight "fallisce se il PID è inesistente"
+/* Messaggi per l'interazione con productservice (mi servono solo le get) */
+Request getProduct 		: product( ID )  
+Reply   getProductAnswer: product( JSonString ) for getProduct 
+ 
+//Request get_weight    	   : get_weight(PID) 			    		   "query verso productservice per ottenere il peso di un prodotto. Contiene il PID del prodotto"
+//Reply   get_weight_success : get_weight_success(WEIGHT) for get_weight "ha successo se il PID è presente nel DB"
+//Reply   get_weight_fail    : get_weight_fail(CAUSA)     for get_weight "fallisce se il PID è inesistente"
+
+
 
 /* Messaggi per l'interazione con hold*/
 Request reserve_slot         : reserve_slot(WEIGHT) 			    	   "richiesta verso hold per prenotare uno slot. Contiene il peso del prodotto da caricare"
@@ -26,8 +31,9 @@ Event container_absent  : container_absent(X)  "evento che avvisa dell'assenza d
 Event interrompi_tutto  : interrompi_tutto(X)  "evento che avvisa di un malfunzionamento del sonar e che quindi costringe a interrompre tutte le attività"
 Event riprendi_tutto    : riprendi_tutto(X)    "evento che avvisa del ripristino del sonar e che quindi permette di continuare tutte le attività"
 
-/* Messaggio che uso per autodispatch */
-Dispatch continue : continue(X)    
+/* Messaggi che uso per autodispatch */
+Dispatch continue : continue(X) 
+  
 
 
 /* Messaggi per l'interazione con il basicrobot */
@@ -83,10 +89,11 @@ Reply   envmap        : envmap(MAP)  for getenvmap
 Context ctx_cargoservice 			ip [host="localhost" port=8000]
 //Context ctx_cargoservice_clients 	ip [host="localhost" port=9000]
 //Context ctx_iodevices 				ip [host="localhost" port=8001]
-Context ctxbasicrobot ip [host="127.0.0.1"  port=8020   ]  
+Context ctx_basicrobot     ip [host="127.0.0.1"  	  port=8020]
+Context ctx_productservice ip [host="cargoserviceqak" port=8111]  
 
-ExternalQActor basicrobot context ctxbasicrobot   
-
+ExternalQActor basicrobot     context ctx_basicrobot   
+ExternalQActor productservice context ctx_productservice
 
 
 
@@ -128,24 +135,34 @@ QActor cargoservice context ctx_cargoservice {
 			[# Cur_prod_PID = payloadArg(0).toInt() #]
 			println("$name | checking with productservice for the weight of PID: $Cur_prod_PID") color blue
 			
-			request productservice -m get_weight : get_weight($Cur_prod_PID)
+			request productservice -m getProduct : product($Cur_prod_PID)
 		}
 	}
 	Transition t0
-	   whenReply get_weight_success -> reserve_slot
-	   whenReply get_weight_fail	-> get_weight_fail
+	   whenReply getProductAnswer -> check_prod_answer
+
+
+	State check_prod_answer {
+		onMsg( getProductAnswer : product( JSonString ) ) {
+			[# 
+				val jsonStr = payloadArg(0)
+				Cur_prod_weight = main.java.Product.getJsonInt(jsonStr, "weight")
+			#]
+			
+			println("$name | the weight of PID is: $Cur_prod_PID") color blue
+		}
+	}	
+	Goto reserve_slot if [# Cur_prod_weight > 0 #] else get_weight_fail
+
 	
 	
 	State get_weight_fail {
-		onMsg( get_weight_fail : get_weight_fail(CAUSA) ) {
-			[# 
-				val Causa = payloadArg(0) 
-				val CausaMsg = "Non è stato possibile recuperare il peso di PID: $Cur_prod_PID da productservice. \n\tCausa: $Causa"
-			#]
-			println("$name | $CausaMsg") color red
-			
-			replyTo load_product with load_refused : load_refused($CausaMsg)
-		}
+		[# 
+			val Causa = "Non è stato possibile recuperare il peso di PID: $Cur_prod_PID in quanto non registrato dentro a productservice."
+		#]
+		println("$name | $Causa") color red
+		
+		replyTo load_product with load_refused : load_refused($Causa)
 	}
     Goto wait_request
 	
@@ -156,15 +173,9 @@ QActor cargoservice context ctx_cargoservice {
 	/* Tento di prenotare uno slot */
 	
 	State reserve_slot {
-		onMsg( get_weight_success : get_weight_success(PESO) ) {
-			[# 
-				Cur_prod_weight = payloadArg(0).toInt() 
-			#]
-			
-			println("$name | checking with hold if a reservation with (PID: $Cur_prod_PID, KG: $Cur_prod_weight) is possible") color blue
-			
-			request hold -m reserve_slot : reserve_slot($Cur_prod_weight)
-		}
+		println("$name | checking with hold if a reservation with (PID: $Cur_prod_PID, KG: $Cur_prod_weight) is possible") color blue
+		
+		request hold -m reserve_slot : reserve_slot($Cur_prod_weight)
 	}
     Transition t0
 	   whenReply reserve_slot_success -> load_cargo
@@ -579,30 +590,7 @@ QActor cargorobot context ctx_cargoservice{
  
  
  
-QActor productservice context ctx_cargoservice{
-  	State s0 initial {
-		println("$name | STARTS")
-	} 
-	Goto wait_request
-	
-	
-	  
-	State wait_request{
-//		println("$name | waiting for request") color magenta
-	}
-	Transition t0
-	   whenRequest get_weight -> handle_query
-	  
-	
-	State handle_query{
-//		println("$name | loading cargo") color blue
-		
-		delay 1000
-		// risposta mock
-		replyTo get_weight with get_weight_success : get_weight_success(10)
-	}
-	Goto wait_request
-} 
+
  
 	
 QActor hold context ctx_cargoservice{
@@ -714,34 +702,37 @@ QActor external_client context ctx_cargoservice{
   	
   	State work1 {
  		println("$name | sends request") color cyan
- 		request cargoservice -m load_product: load_product(10)
+ 		request cargoservice -m load_product: load_product(17)
  		delay 2000
   	} 
   	Transition t0
 	   whenReply load_accepted -> work2
+	   whenReply load_refused  -> work2
 	   
 	   
 	State work2 {
  		println("$name | sends request") color cyan
- 		request cargoservice -m load_product: load_product(20)
+ 		request cargoservice -m load_product: load_product(10)
  		delay 2000
   	} 
   	Transition t0
 	   whenReply load_accepted -> work3
+	   whenReply load_refused  -> work3
 	   
 	
 	State work3 {
  		println("$name | sends request") color cyan
- 		request cargoservice -m load_product: load_product(30)
+ 		request cargoservice -m load_product: load_product(17)
  		delay 2000
   	} 
   	Transition t0
 	   whenReply load_accepted -> work4
+	   whenReply load_refused  -> work4
 	   
 	
 	State work4 {
  		println("$name | sends request") color cyan
- 		request cargoservice -m load_product: load_product(40)
+ 		request cargoservice -m load_product: load_product(10)
  		delay 2000
   	} 
 }

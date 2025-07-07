@@ -61,26 +61,40 @@ class Cargoservice ( name: String, scope: CoroutineScope, isconfined: Boolean=fa
 						                        currentMsg.msgContent()) ) { //set msgArgList
 								 Cur_prod_PID = payloadArg(0).toInt()  
 								CommUtils.outblue("$name | checking with productservice for the weight of PID: $Cur_prod_PID")
-								request("get_weight", "get_weight($Cur_prod_PID)" ,"productservice" )  
+								request("getProduct", "product($Cur_prod_PID)" ,"productservice" )  
 						}
 						//genTimer( actor, state )
 					}
 					//After Lenzi Aug2002
 					sysaction { //it:State
 					}	 	 
-					 transition(edgeName="t01",targetState="reserve_slot",cond=whenReply("get_weight_success"))
-					transition(edgeName="t02",targetState="get_weight_fail",cond=whenReply("get_weight_fail"))
+					 transition(edgeName="t01",targetState="check_prod_answer",cond=whenReply("getProductAnswer"))
+				}	 
+				state("check_prod_answer") { //this:State
+					action { //it:State
+						if( checkMsgContent( Term.createTerm("product(JSonString)"), Term.createTerm("product(JSonString)"), 
+						                        currentMsg.msgContent()) ) { //set msgArgList
+								 
+												val jsonStr = payloadArg(0)
+												Cur_prod_weight = main.java.Product.getJsonInt(jsonStr, "weight")
+								CommUtils.outblue("$name | the weight of PID is: $Cur_prod_PID")
+						}
+						//genTimer( actor, state )
+					}
+					//After Lenzi Aug2002
+					sysaction { //it:State
+					}	 	 
+					 transition( edgeName="goto",targetState="reserve_slot", cond=doswitchGuarded({ Cur_prod_weight > 0  
+					}) )
+					transition( edgeName="goto",targetState="get_weight_fail", cond=doswitchGuarded({! ( Cur_prod_weight > 0  
+					) }) )
 				}	 
 				state("get_weight_fail") { //this:State
 					action { //it:State
-						if( checkMsgContent( Term.createTerm("get_weight_fail(CAUSA)"), Term.createTerm("get_weight_fail(CAUSA)"), 
-						                        currentMsg.msgContent()) ) { //set msgArgList
-								 
-												val Causa = payloadArg(0) 
-												val CausaMsg = "Non è stato possibile recuperare il peso di PID: $Cur_prod_PID da productservice. \n\tCausa: $Causa"
-								CommUtils.outred("$name | $CausaMsg")
-								answer("load_product", "load_refused", "load_refused($CausaMsg)"   )  
-						}
+						 
+									val Causa = "Non è stato possibile recuperare il peso di PID: $Cur_prod_PID in quanto non registrato dentro a productservice."
+						CommUtils.outred("$name | $Causa")
+						answer("load_product", "load_refused", "load_refused($Causa)"   )  
 						//genTimer( actor, state )
 					}
 					//After Lenzi Aug2002
@@ -90,20 +104,15 @@ class Cargoservice ( name: String, scope: CoroutineScope, isconfined: Boolean=fa
 				}	 
 				state("reserve_slot") { //this:State
 					action { //it:State
-						if( checkMsgContent( Term.createTerm("get_weight_success(WEIGHT)"), Term.createTerm("get_weight_success(PESO)"), 
-						                        currentMsg.msgContent()) ) { //set msgArgList
-								 
-												Cur_prod_weight = payloadArg(0).toInt() 
-								CommUtils.outblue("$name | checking with hold if a reservation with (PID: $Cur_prod_PID, KG: $Cur_prod_weight) is possible")
-								request("reserve_slot", "reserve_slot($Cur_prod_weight)" ,"hold" )  
-						}
+						CommUtils.outblue("$name | checking with hold if a reservation with (PID: $Cur_prod_PID, KG: $Cur_prod_weight) is possible")
+						request("reserve_slot", "reserve_slot($Cur_prod_weight)" ,"hold" )  
 						//genTimer( actor, state )
 					}
 					//After Lenzi Aug2002
 					sysaction { //it:State
 					}	 	 
-					 transition(edgeName="t03",targetState="load_cargo",cond=whenReply("reserve_slot_success"))
-					transition(edgeName="t04",targetState="reserve_slot_fail",cond=whenReply("reserve_slot_fail"))
+					 transition(edgeName="t02",targetState="load_cargo",cond=whenReply("reserve_slot_success"))
+					transition(edgeName="t03",targetState="reserve_slot_fail",cond=whenReply("reserve_slot_fail"))
 				}	 
 				state("reserve_slot_fail") { //this:State
 					action { //it:State
@@ -138,7 +147,7 @@ class Cargoservice ( name: String, scope: CoroutineScope, isconfined: Boolean=fa
 					//After Lenzi Aug2002
 					sysaction { //it:State
 					}	 	 
-					 transition(edgeName="t05",targetState="load_request_done",cond=whenReply("load_operation_complete"))
+					 transition(edgeName="t04",targetState="load_request_done",cond=whenReply("load_operation_complete"))
 				}	 
 				state("load_request_done") { //this:State
 					action { //it:State

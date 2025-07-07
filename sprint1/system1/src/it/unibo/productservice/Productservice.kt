@@ -32,33 +32,11 @@ class Productservice ( name: String, scope: CoroutineScope, isconfined: Boolean=
 		return { //this:ActionBasciFsm
 				state("s0") { //this:State
 					action { //it:State
-						CommUtils.outblack("$name | STARTS")
 						//genTimer( actor, state )
 					}
 					//After Lenzi Aug2002
 					sysaction { //it:State
 					}	 	 
-					 transition( edgeName="goto",targetState="wait_request", cond=doswitch() )
-				}	 
-				state("wait_request") { //this:State
-					action { //it:State
-						//genTimer( actor, state )
-					}
-					//After Lenzi Aug2002
-					sysaction { //it:State
-					}	 	 
-					 transition(edgeName="t044",targetState="handle_query",cond=whenRequest("get_weight"))
-				}	 
-				state("handle_query") { //this:State
-					action { //it:State
-						delay(1000) 
-						answer("get_weight", "get_weight_success", "get_weight_success(10)"   )  
-						//genTimer( actor, state )
-					}
-					//After Lenzi Aug2002
-					sysaction { //it:State
-					}	 	 
-					 transition( edgeName="goto",targetState="wait_request", cond=doswitch() )
 				}	 
 			}
 		}

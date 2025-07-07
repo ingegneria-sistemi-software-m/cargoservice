@@ -4,9 +4,8 @@
 request( load_product, load_product(PID) ). %la richiesta di carico di un container che arriva a cargoservice: contiene il PID del prodotto
 reply( load_accepted, load_accepted(SLOT) ). %%for load_product | può essere accettata, con restituzione dello slot assegnato al container
 reply( load_refused, load_refused(CAUSA) ). %%for load_product | può essere rifiutata per vari motivi (peso, slot occupati, PID inesistente)
-request( get_weight, get_weight(PID) ). %query verso productservice per ottenere il peso di un prodotto. Contiene il PID del prodotto
-reply( get_weight_success, get_weight_success(WEIGHT) ). %%for get_weight | ha successo se il PID è presente nel DB
-reply( get_weight_fail, get_weight_fail(CAUSA) ). %%for get_weight | fallisce se il PID è inesistente
+request( getProduct, product(ID) ).
+reply( getProductAnswer, product(JSonString) ).  %%for getProduct
 request( reserve_slot, reserve_slot(WEIGHT) ). %richiesta verso hold per prenotare uno slot. Contiene il peso del prodotto da caricare
 reply( reserve_slot_success, reserve_slot_success(SLOT) ). %%for reserve_slot | se la richiesta è soddisfacibile, hold restituisce il nome/id dello slot prenotato
 reply( reserve_slot_fail, reserve_slot_fail(CAUSA) ). %%for reserve_slot | fallisce se il peso supera MaxLoad oppure se non c'è uno slot libero
@@ -49,14 +48,14 @@ request( getenvmap, getenvmap(X) ).
 reply( envmap, envmap(MAP) ).  %%for getenvmap
 %====================================================================================
 context(ctx_cargoservice, "localhost",  "TCP", "8000").
-context(ctxbasicrobot, "127.0.0.1",  "TCP", "8020").
- qactor( basicrobot, ctxbasicrobot, "external").
+context(ctx_basicrobot, "127.0.0.1",  "TCP", "8020").
+context(ctx_productservice, "cargoserviceqak",  "TCP", "8111").
+ qactor( basicrobot, ctx_basicrobot, "external").
+  qactor( productservice, ctx_productservice, "external").
   qactor( cargoservice, ctx_cargoservice, "it.unibo.cargoservice.Cargoservice").
  static(cargoservice).
   qactor( cargorobot, ctx_cargoservice, "it.unibo.cargorobot.Cargorobot").
  static(cargorobot).
-  qactor( productservice, ctx_cargoservice, "it.unibo.productservice.Productservice").
- static(productservice).
   qactor( hold, ctx_cargoservice, "it.unibo.hold.Hold").
  static(hold).
   qactor( sonar, ctx_cargoservice, "it.unibo.sonar.Sonar").
