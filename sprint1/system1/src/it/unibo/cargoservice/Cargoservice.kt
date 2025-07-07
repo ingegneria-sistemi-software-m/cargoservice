@@ -105,7 +105,7 @@ class Cargoservice ( name: String, scope: CoroutineScope, isconfined: Boolean=fa
 				state("reserve_slot") { //this:State
 					action { //it:State
 						CommUtils.outblue("$name | checking with hold if a reservation with (PID: $Cur_prod_PID, KG: $Cur_prod_weight) is possible")
-						request("reserve_slot", "reserve_slot($Cur_prod_weight)" ,"hold" )  
+						request("reserve_slot", "reserve_slot($Cur_prod_weight)" ,"hold_mock" )  
 						//genTimer( actor, state )
 					}
 					//After Lenzi Aug2002

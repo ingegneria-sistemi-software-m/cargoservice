@@ -93,7 +93,7 @@ Reply   load_operation_complete : load_operation_complete(OK) for handle_load_op
 ```
 
 
-### Modello 
+### Modello cargoservice
 L'analisi della sequenza di attività suggerisce anche gli stati dell'attore QAK con cui modellare cargoservice
 
 
@@ -226,56 +226,408 @@ QActor cargoservice context ctx_cargoservice {
 
 
 
+## Analisi del problema | cargorobot
+Come detto nello sprint 0, e consolidato durante l'analisi di _cargoservice_,  l’attore _cargorobot_ è il componente responsabile delle attività del _DDR_ all'interno del _deposito_. _cargorobot_ implementa le sue azioni logiche comunicando con il _basicrobot_, che a sua volta comunica con l’ambiente virtuale _WEnv_. Il tutto per effettuare gli interventi di carico richiesti da _cargoservice_.
 
+Con l'analisi dei requisiti e l'analisi di _cargoservice_ si è già delineata la sequenza di attività del _cargorobot_:
+1. _cargorobot_ riceve da _cargoservice_ una richiesta di gestione di un container contenente il nome dello _slot_ riservato.
 
+2. _cargorobot_ si dirige verso la pickup-position e aspetta che arrivi il container se non è già presente.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-## Analisi cargorobot
-// responsabilità e userstory di cargorobot
-
-Durante l'analisi dei requisiti si è detto che il _cargorobot_ è il componente responsabile del comando del DDR. Il _cargorobot_ si interfaccia con il _basicrobot_ (fornito dal committente) per muovere il DDR. Estendendo le funzionalità del _basicrobot_ **colma l'abstraction gap** tra quest'ultimo e i requisiti.
-
-L'analisi dei requisiti e l'analisi di _cargoservice_ hanno già delineato in parte la sequenza di attività del _cargorobot_:
-1. _cargorobot_ riceve da _cargoservice_ una richiesta di gestione di un container
-2. _cargorobot_ si dirige verso la pickup-position e aspetta che arrivi il container
-    - **PUNTO APERTO: chi è che ascolta il sonar e aggiorna lo stato di cargorobot per confermare la presenza del container???** 
-3. _cargorobot_ :
+3. Una volta che il container è arrivato all'_IO-port_, _cargorobot_:
     - recupera il container
-    - trasporta il container allo _slot_ prenotato (si posizione nella corretta _laydown-position_)
+    - si posizione nella corretta _laydown-position_
     - deposita il container nello _slot_ prenotato
-4. terminato l'intervento di carico, _cargorobot_ può ritornare alla _home_ rispondendo a _cargoservice_ del successo del suo intervento di carico
-    - **NB**: da questo momento in poi _cargoservice_ torna ad essere recettivo a richieste di carico da parte dei clienti 
-    - **NB2**: da questo momenti in poi _cargorobot_ torna ad essere recettivo a richieste di carico da parte di _cargoservice_
-    - **NB3**: per adesso non c'è nessun motivo di fallimento per il cargorobot (timeout??) e quindi la risposta serve solo a sincronizzare _cargoservice_ e _cargorobot_
+
+4. terminato l'intervento di carico, _cargorobot_ può ritornare alla _home_ rispondendo a _cargoservice_ con un messaggio di successo.
+
+
+### Considerazioni
+- Una volta ricevuta la risposta di successo, **_cargoservice_ torna a essere recettivo** a richieste di carico da parte dei clienti e a poter servire quelle che si sono nel frattempo accodate. 
+
+- Nulla vieta che _cargorobot_ possa incominciare a effettuare immediatamente altri interventi di carico **prima di essere ritornato alla home**. Anzi, sarebbe una soluzione più efficiente.
+
+- Il [requisito numero 5](https://github.com/ingegneria-sistemi-software-m/cargoservice/tree/master/requirements) specifica che **in un qualsiasi momento _cargorobot_ può essere interrotto** fino a quando il sonar non smette di essere difettoso.
     
-**NB**: in un qualsiasi momento l'attività del cargorobot può essere interrotta. **PUNTO APERTO: come fa cargorobot a interrompersi e riprendere???**
+- Dai requisiti forniti, **non c'è nessun motivo per cui un intervento di carico dovrebbe fallire**. Di conseguenza, l'unica risposta contemplata da _cargoservice_, in seguito ad una richiesta verso _cargorobot_, è una risposta di successo.
 
 
-**(sostituire i punti aperti con domande e risposte) PUNTO APERTO: Come fa _cargorobot_ a conoscere le posizioni notevoli in cui deve andare dato il nome di uno slot?** 
+### Problematiche
+L'analisi fatta fino ad ora evidenzia una serie di problematiche.
 
-**PUNTO APERTO: come fa _cargorobot_ a sapere se il container è già presente all'IO-port o no?**
-
-- **PUNTO APERTO: il commmittente ci ha detto che possiamo fare come ci pare per quanto riguarda il momento in cui _cargoservice_ può tornare a servire le richieste... la nostra scelta però deve essere opportunamente motivata. Cosa scegliamo???**
-
-
-// codice qak di cargorobot
+#### Come fa _cargorobot_ a conoscere  le coordinate a cui si deve posizionare, e l'orientamento che deve avere, dato solo il nome dello _slot_ riservato nella richiesta di intervento di carico?
+_cargorobot_ dovrà mantenere nel suo stato una **mappa** che associa: nomi degli slot, con le coordinate delle laydown-position e l'orientamento che deve avere una volta raggiunte quest'ultime. 
 
 
+#### Come fa _cargorobot_ a interrompere/riprendere le sue attività?**
+Siccome il guasto del sonar può avvenire in qualsiasi momento, _cargorobot_ dovrà essere **sempre recettivo all'evento di guasto** per potersi interrompere tempestivamente. Questa significa che _cargorobot_ dovrà necessariamente avere uno **stato persistente di attesa**, in cui attende che il _sonar_ riprenda a funzionare, ed uno **stato di ripristino**, in cui riprende cio che stava facendo prima.
+
+
+#### Come fa _cargorobot_ a bloccare il _basicrobot_ in movimento?**
+Un guasto del sonar può avvenire dopo che _cargorobot_ ha comandato _basicrobot_ di spostarsi, ma prima che _basicrobot_ abbia terminato lo spostamento. In queste situazioni, _cargorobot_ può entrare nello stato di attesa citato prima, ma _basicrobot_ (che è un attore dotato di un proprio flusso di controllo) continuerebbe ad eseguire il piano di spostamento.
+
+Fortunatamente, il committente ha previsto un evento di nome: **_"Event alarm : alarm(X)"_** nell'interfaccia del _basicrobot_ con cui è possibile interrompere l'esecuzione del piano. 
+
+Per bloccare il _basicrobot_ è quindi sufficiente emettere l'evento alarm nello stato persistente di attesa di _cargorobot_.
+
+
+#### Come fa _cargorobot_ a ricordarsi dove doveva andare una volta interrotto durante uno spostamento?** 
+_cargorobot_ dovrà mantenere nel suo stato due informazioni aggiuntive:
+- un flag che indica se si stava muovendo
+- la sua destinazione corrente
+
+In questa maniera, se interrotto durante uno spostamento, nello stato di ripristino sarà possibile inviare a _basicrobot_ una nuova richiesta di spostamento verso la destionazione. 
+
+Se _cargorobot_ viene interrotto mentre non si sta spostando, nello stato di ripristino non sarò necessario effettuare questa richiesta. 
+
+
+#### Come fa _cargorobot_ a sapere se il _container_ è già presente all'IO-port o meno, prima di arrivarci?
+Similmente ai guasti del _sonar_, **un _container_ può arrivare all'IO-port in qualsiasi momento** e per questo motivo _cargorobot_ dovrà essere sempre recettivo agli eventi del _sonar_ che avvisano della presenza/assenza di un _container_.
+
+A questo punto, sarà sufficiente che _cargorobot_ mantenga nel suo stato un **flag booleano** che salva l'informazione riguardante la presenza/assenza di un container. _cargorobot_ aggiornerà questo stato con delle **routine di gestione** che si attivano in corrispondenza degli eventi del sonar.  
+
+
+
+### Nuovi messaggi
+L'analisi fatta fino ad ora porta a definire i seguenti nuovi messaggi.
+
+
+**Eventi del sonar**
+```
+Event container_arrived : container_arrived(X) 
+Event container_absent  : container_absent(X)  
+Event interrompi_tutto  : interrompi_tutto(X)  "evento che avvisa di un guasto del sonar"
+Event riprendi_tutto    : riprendi_tutto(X)    "evento che avvisa del ripristino del sonar"
+```
+
+Questi messaggi sono stati modellati come eventi in quanto è presumibile che avranno altri componenti oltre a _cargorobot_ come destinatari negli sprint successivi
+- _web-gui_ <- container_arrived, container_absent
+- _led_     <- interrompi_tutto, riprendi_tutto
+
+
+
+### Modello cargorobot
+L'analisi fatta fino ha portato al seguente modello.
+
+```
+QActor cargorobot context ctx_cargoservice{
+	[#
+		// stato
+		val Step_len = 330
+		
+		val positions = hashMapOf(
+			"home"    	to arrayOf(0, 0),
+			"io_port" 	to arrayOf(0, 4),
+		    "slot1"   	to arrayOf(1, 1),
+		    "slot2" 	to arrayOf(1, 3),
+		    "slot3" 	to arrayOf(4, 1),
+		    "slot4" 	to arrayOf(4, 3)
+		)
+		
+		val directions = hashMapOf(
+			"home"    	to "down",
+			"io_port" 	to "down",
+		    "slot1"   	to "right",
+		    "slot2" 	to "right",
+		    "slot3" 	to "left",
+		    "slot4" 	to "left"
+		)
+
+		lateinit var Destination : String
+		lateinit var Reserved_slot : String
+		
+		var moving 	= false
+		
+		var container_present = false
+	#]
+    
+	State s0 initial {
+		println("$name | STARTS") color magenta
+	
+		println("$name | $MyName engaging ... ") color yellow 
+		request basicrobot -m engage : engage($MyName, $Step_len)
+	}
+	Transition t0
+		whenReply engagedone    -> wait_request  
+ 	  	whenReply engagerefused -> end
+	
+	  
+	/* inizio ciclo di servizio */
+	
+	State wait_request{
+		println("$name | waiting for request") color magenta
+		[# moving = false #]
+	}
+	Transition t0
+		whenInterruptEvent interrompi_tutto  -> wait_resume_msg
+		whenInterruptEvent container_arrived -> container_arrived_handler
+		whenInterruptEvent container_absent  -> container_absent_handler
+		whenRequest handle_load_operation    -> go_to_io_port
+	   		
+		
+	/* vado a prendere il container */
+	
+	State go_to_io_port {
+		// aggiorno il mio stato recuperando le coordinato dello slot prenotato
+		onMsg( handle_load_operation : handle_load_operation(SLOT) ) {
+			[# 
+				Reserved_slot = payloadArg(0)
+								
+				// il doppio !! serve a dire al compilatore Kotlin di stare tranquillo 
+				// e di recuperare il valore dalla mappa anche senza fare dei null-check
+				val coords = positions[Reserved_slot]!!
+				val X = coords[0]
+				val Y = coords[1]
+			#]
+			// DEBUG: 
+			println("$name | cargorobot reserved_slot is $Reserved_slot = ($X, $Y)") color magenta
+		}
+		
+		// vado verso la io-port
+		println("$name | going to io-port") color magenta
+		[#
+			// aggiorno la mia destinazione per ricordarmi dove devo andare in caso di interruzioni
+			Destination = "io_port"
+			
+			val coords = positions[Destination]!!
+			val X = coords[0]
+			val Y = coords[1]
+		#]
+		
+    	request basicrobot -m  moverobot : moverobot($X, $Y)
+    	
+		[# moving = true #]
+ 	}  	
+  	Transition t0 
+  		whenInterruptEvent interrompi_tutto  -> wait_resume_msg
+  		whenInterruptEvent container_arrived -> container_arrived_handler
+		whenInterruptEvent container_absent  -> container_absent_handler
+  		whenReply moverobotdone 		     -> arrived_at_io_port
+		
+
+	State arrived_at_io_port {
+		println("$name | arrived at io-port") color magenta
+		[# 
+			moving = false
+			
+			val Direction = directions[Destination]!!
+		#]
+		forward basicrobot -m setdirection : dir($Direction)
+		
+		// se il container c'è gia, mi mando un autodispatch cosi da non dover aspettare
+		if [# container_present #] {
+			[# container_present = false #]
+			autodispatch continue : continue(si)
+		}
+ 	}  	
+ 	Transition t0
+ 		whenInterruptEvent interrompi_tutto -> wait_resume_msg
+ 		whenMsg continue 					-> pick_up_container
+ 		whenEvent container_arrived 		-> pick_up_container
+
+
+	State pick_up_container {
+		println("$name | picking up container") color magenta
+		[# moving = false #] // non cambia rispetto allo stato precedente ma meglio essere espliciti
+		
+		delay 3000 // tempo arbitrario per caricare il container sul cargorobot
+		
+		// durante il carico del container potrebbe essere arrivato una interruzione,
+		// mi mando un messaggio per ricordarmi che posso procedere
+		autodispatch continue : continue(si)
+	}
+	Transition t0
+		whenInterruptEvent interrompi_tutto -> wait_resume_msg
+		whenInterruptEvent container_arrived -> container_arrived_handler
+		whenInterruptEvent container_absent  -> container_absent_handler
+		whenMsg continue 					-> go_to_reserved_slot 
+		
+
+	/* vado a depositare il container */
+	
+	State go_to_reserved_slot {
+		[#
+			// aggiorno la mia destinazione per ricordarmi dove devo andare in caso di interruzioni
+			Destination = Reserved_slot
+			
+			val coords = positions[Destination]!!
+			val X = coords[0]
+			val Y = coords[1]
+		#]
+		
+		println("$name | going to my reserved slot: $Reserved_slot = ($X, $Y)") color magenta
+		
+    	request basicrobot -m  moverobot : moverobot($X, $Y)
+    	[# moving = true #]
+ 	}  	
+ 	Transition t0 
+ 		whenInterruptEvent interrompi_tutto  -> wait_resume_msg
+		whenInterruptEvent container_arrived -> container_arrived_handler
+		whenInterruptEvent container_absent  -> container_absent_handler
+ 		whenReply moverobotdone   			 -> arrived_at_reserved_slot
+ 		
+		
+	State arrived_at_reserved_slot {
+		println("$name | arrived at reserved slot") color magenta
+		[# 
+			moving = false
+			
+			val Direction = directions[Destination]!!
+		#]
+		forward basicrobot -m setdirection : dir($Direction)
+		
+		// scarico il container
+		println("$name | laying down the container") color magenta
+		delay 3000 // tempo arbitrario per scaricare il container dal cargorobot
+		 
+		// duranto lo scarico potrebbe essere arrivato una interruzione,
+		// mi mando un messaggio per ricordarmi che posso procedere
+		autodispatch continue : continue(si)
+	}
+	Transition t0
+		whenInterruptEvent interrompi_tutto  -> wait_resume_msg
+		whenInterruptEvent container_arrived -> container_arrived_handler
+		whenInterruptEvent container_absent  -> container_absent_handler
+		whenMsg continue 					 -> back_to_home 
+ 	
+   	
+   	/* torno a casa */
+   	
+  	State back_to_home {
+  		// rispondo a cargoservice
+  		println("$name | load operation completed") color magenta
+		replyTo handle_load_operation with load_operation_complete : load_operation_complete(ok)
+		
+		// mi avvio verso casa
+		println("$name | Back to home") color magenta
+		[#
+			// aggiorno la mia destinazione per ricordarmi dove devo andare in caso di interruzioni
+			Destination = "home"
+			
+			val coords = positions[Destination]!!
+			val X = coords[0]
+			val Y = coords[1]
+		#]
+
+		request basicrobot -m  moverobot : moverobot($X, $Y)
+		[# moving = true #]
+	}  	
+  	Transition t0 
+  		whenInterruptEvent interrompi_tutto  -> wait_resume_msg
+  		whenInterruptEvent container_arrived -> container_arrived_handler
+		whenInterruptEvent container_absent  -> container_absent_handler
+		whenReply moverobotdone 			 -> at_home 
+        whenRequest handle_load_operation    -> stop_going_to_home // servo subito eventuali richieste in coda 
+  		
+
+  	State stop_going_to_home {
+   		println("$name | stop going to home and start serving new request immediately") color magenta
+   		emit alarm : alarm(blocca) // blocco il basicrobot
+   		[# moving = false #]
+   		
+   		// aggiorno il mio slot prenotato (non viene fatto in 'go_to_io_port' dato che consumo
+   		// la richiesta 'handle_load_operation' prima di arrivarci, e quindi il relativo blocco 
+   		// onMsg{} di 'go_to_io_port' non viene eseguito)
+   		onMsg( handle_load_operation : handle_load_operation(SLOT) ) { 
+			[# 
+				Reserved_slot = payloadArg(0)
+								
+				// il doppio !! serve a dire al compilatore Kotlin di stare tranquillo 
+				// e di recuperare il valore dalla mappa anche senza fare dei null-check
+				val coords = positions[Reserved_slot]!!
+				val X = coords[0]
+				val Y = coords[1]
+			#]
+			// DEBUG: 
+			println("$name | cargorobot reserved_slot is $Reserved_slot = ($X, $Y)") color magenta
+		}
+   		
+   		// anche se estremamente improbabile, anche durante questo mini-stato 
+   		// potrebbe essere arrivata una interruzione.
+		// Mi mando un messaggio per ricordarmi che posso procedere
+		autodispatch continue : continue(si)
+   	}
+   	Transition t0
+	   	whenInterruptEvent interrompi_tutto  -> wait_resume_msg
+		whenInterruptEvent container_arrived -> container_arrived_handler
+		whenInterruptEvent container_absent  -> container_absent_handler
+		whenMsg continue					 -> go_to_io_port
+  		
+  	
+  	State at_home{
+   		println("$name | at home") color magenta
+   		forward basicrobot -m setdirection : dir(down)
+   		[# 
+   			moving = false
+   			
+   			val Direction = directions[Destination]!!
+		#]
+		forward basicrobot -m setdirection : dir($Direction)
+   		// anche se estremamente improbabile, anche durante questo mini-stato 
+   		// potrebbe essere arrivata una interruzione.
+		// Mi mando un messaggio per ricordarmi che posso procedere
+		autodispatch continue : continue(si)
+   	}
+   	Transition t0 
+	   	whenInterruptEvent interrompi_tutto  -> wait_resume_msg
+		whenInterruptEvent container_arrived -> container_arrived_handler
+		whenInterruptEvent container_absent  -> container_absent_handler
+   		whenMsg continue 					 -> wait_request
+   	
+   	
+   	/* gestisco le interruzioni */
+   	
+   	State wait_resume_msg {
+   		println("$name | sonar malfunzionante, mi fermo") color red
+   		
+   		emit alarm : alarm(blocca) // blocco il basicrobot
+	}
+	Transition t0
+		whenEvent riprendi_tutto -> resume
+	
+	
+	State resume {
+		println("$name | riprendo") color green
+		
+		// se il basic robot si stava muovendo, gli dico di nuovo dove deve andare
+		// altrimenti rimane fermo dove è stato interrotto
+		if [# moving #] {
+			[#
+				val coords = positions[Destination]!!
+				val X = coords[0]
+				val Y = coords[1]
+			#]
+	    	request basicrobot -m  moverobot : moverobot($X, $Y)
+    	}
+    	
+    	returnFromInterrupt
+	}
+		
+		
+   	State container_arrived_handler {
+   		println("$name | container arrivato") color yellow
+   		
+   		[# container_present = true #]
+   		returnFromInterrupt
+   	}
+   	
+	State container_absent_handler {
+   		println("$name | container assente") color yellow
+   		
+   		[# container_present = false #]
+   		returnFromInterrupt
+   	}
+   	
+   	
+   	/* esco */
+   	
+   	State end{
+		println("$name | ENDS ") color red
+		[# System.exit(0) #]
+	}	
+} 
+ 
+```
 
 
 
@@ -288,13 +640,6 @@ L'analisi dei requisiti e l'analisi di _cargoservice_ hanno già delineato in pa
 
 
 
-
-## Definizione dei messaggi
-
-
-
-## Nuova architettura
-Alla fine dello SPRINT, l’ARCHITETTURA INIZIALE DI RIFERIMENTO avrà subito una evoluzione che produce una nuova nuova ARCHITETTURA DI RIFERIMENTO, che sarà la base di partenza per lo sprint successivo.
 
 
 ## Piano di test
@@ -310,7 +655,9 @@ Fase di progetto e realizzazione, che termina con il **deployment** del prodotto
 
 parla di un file di config
 
-parla di come ci si deve adattare all'interfaccia di productservice
+parla di productservice e basicrobot usati come servizi esterni
+
+parla del bug di cargorobot durante il tentativo di servire richieste immediatamente durante la fase di ritorno
 
 parla di eventuali classi di supporto
 
@@ -318,12 +665,19 @@ ci sta anche lasciare inalterata della roba
 
 
 
-## (Opzionale) Osservabilità (Logging con prolog?)
 
 
-// Deployment
+## Deployment
 
 
 
-## Sintesi finale
+
+
+
+## Sintesi finale e nuova architettura
 Ogni SPRINT dovrebbe terminare con una pagina di sintesi che riporta l’architettura finale corrente del sistema (con i link al modello e ai Test). Questa pagina sarà l’inizio del documento relativo allo SPRINT successivo.
+
+
+Alla fine dello SPRINT, l’ARCHITETTURA INIZIALE DI RIFERIMENTO avrà subito una evoluzione che produce una nuova nuova ARCHITETTURA DI RIFERIMENTO, che sarà la base di partenza per lo sprint successivo.
+
+![arch1](./arch1.png)

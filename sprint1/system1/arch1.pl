@@ -56,9 +56,9 @@ context(ctx_productservice, "cargoserviceqak",  "TCP", "8111").
  static(cargoservice).
   qactor( cargorobot, ctx_cargoservice, "it.unibo.cargorobot.Cargorobot").
  static(cargorobot).
-  qactor( hold, ctx_cargoservice, "it.unibo.hold.Hold").
- static(hold).
-  qactor( sonar, ctx_cargoservice, "it.unibo.sonar.Sonar").
- static(sonar).
+  qactor( hold_mock, ctx_cargoservice, "it.unibo.hold_mock.Hold_mock").
+ static(hold_mock).
+  qactor( sonar_mock, ctx_cargoservice, "it.unibo.sonar_mock.Sonar_mock").
+ static(sonar_mock).
   qactor( external_client, ctx_cargoservice, "it.unibo.external_client.External_client").
  static(external_client).

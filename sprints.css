@@ -6,6 +6,10 @@ h1, h2, h3, h4, h5, h6 {
   color: #007acc; /* azzurro */
 }
 
+h4 {
+  margin-bottom: 0;
+}
+
 .page-break {
   page-break-before: always;
 }

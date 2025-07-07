@@ -9,12 +9,6 @@ Reply   load_refused  : load_refused(CAUSA) for load_product "può essere rifiut
 /* Messaggi per l'interazione con productservice (mi servono solo le get) */
 Request getProduct 		: product( ID )  
 Reply   getProductAnswer: product( JSonString ) for getProduct 
- 
-//Request get_weight    	   : get_weight(PID) 			    		   "query verso productservice per ottenere il peso di un prodotto. Contiene il PID del prodotto"
-//Reply   get_weight_success : get_weight_success(WEIGHT) for get_weight "ha successo se il PID è presente nel DB"
-//Reply   get_weight_fail    : get_weight_fail(CAUSA)     for get_weight "fallisce se il PID è inesistente"
-
-
 
 /* Messaggi per l'interazione con hold*/
 Request reserve_slot         : reserve_slot(WEIGHT) 			    	   "richiesta verso hold per prenotare uno slot. Contiene il peso del prodotto da caricare"
@@ -175,7 +169,7 @@ QActor cargoservice context ctx_cargoservice {
 	State reserve_slot {
 		println("$name | checking with hold if a reservation with (PID: $Cur_prod_PID, KG: $Cur_prod_weight) is possible") color blue
 		
-		request hold -m reserve_slot : reserve_slot($Cur_prod_weight)
+		request hold_mock -m reserve_slot : reserve_slot($Cur_prod_weight)
 	}
     Transition t0
 	   whenReply reserve_slot_success -> load_cargo
@@ -461,8 +455,9 @@ QActor cargorobot context ctx_cargoservice{
   		whenInterruptEvent container_arrived -> container_arrived_handler
 		whenInterruptEvent container_absent  -> container_absent_handler
 		whenReply moverobotdone 			 -> at_home 
-		// TODO: questa transizione causa bug, il motivo penso sia la presenza di un messaggio spurio
-		// da qualche parte che fa partire prima del previsto una transizione
+		// TODO: questa transizione causa bug, il motivo sembra essere la presenza di un messaggio spurio
+		// 'moverobotdone' che fa partire subito la transizione 'go_to_io_port -> arrived_at_io_port'
+		// ... non capisco però cosa causi questo messaggio spurio
 //  		whenRequest handle_load_operation    -> stop_going_to_home // servo subito eventuali richieste in coda 
   		
 
@@ -493,14 +488,14 @@ QActor cargorobot context ctx_cargoservice{
 		// Mi mando un messaggio per ricordarmi che posso procedere
 		autodispatch continue : continue(si)
    	}
-   	Transition t0 
+   	Transition t0
 	   	whenInterruptEvent interrompi_tutto  -> wait_resume_msg
 		whenInterruptEvent container_arrived -> container_arrived_handler
 		whenInterruptEvent container_absent  -> container_absent_handler
 		whenMsg continue					 -> go_to_io_port
   		
-  		
-  		
+  	
+
   	State at_home{
    		println("$name | at home") color magenta
    		forward basicrobot -m setdirection : dir(down)
@@ -593,7 +588,7 @@ QActor cargorobot context ctx_cargoservice{
 
  
 	
-QActor hold context ctx_cargoservice{
+QActor hold_mock context ctx_cargoservice{
 	[# 
 		var Counter = 0
 	#]
@@ -647,15 +642,9 @@ QActor hold context ctx_cargoservice{
 
 
 
-//QActor webgui context ctx_cargoservice{
-// 	State s0 initial {
-//  	} 
-//}
-//
-//
 
 
-QActor sonar context ctx_cargoservice{
+QActor sonar_mock context ctx_cargoservice{
 	[#
 		var counter = 0	
 	#]
@@ -686,11 +675,21 @@ QActor sonar context ctx_cargoservice{
 }
 
 
+//QActor webgui context ctx_cargoservice{
+// 	State s0 initial {
+//  	} 
+//}
+//
+//
+
 //
 //QActor led context ctx_cargoservice{
 // 	State s0 initial {
 //  	} 
 //}
+ 
+ 
+ 
  
 
 QActor external_client context ctx_cargoservice{
@@ -732,7 +731,7 @@ QActor external_client context ctx_cargoservice{
 	
 	State work4 {
  		println("$name | sends request") color cyan
- 		request cargoservice -m load_product: load_product(10)
+ 		request cargoservice -m load_product: load_product(17)
  		delay 2000
   	} 
 }
