@@ -1,10 +1,14 @@
 # Sprint 1
 
-## Obiettivi
+## Punto di partenza
 L'analisi dei requisiti avvenuta nello [Sprint 0](https://github.com/ingegneria-sistemi-software-m/cargoservice/tree/master/sprint0/sprint0.pdf) ha portato a definire una **prima architettura generale del sistema**. 
 
-![arch0](../sprint0/arch0.png)
+<img src="../sprint0/arch0.png" width="90%" height="90%"/>
 
+<div class="page-break"></div>
+
+
+## Obiettivi
 L'obiettivo dello sprint 1 sarà affrontare il sottoinsieme dei requisiti relativi ai componenti _cargorservice_ e _cargorobot_, effettuandone l'analisi del problema e la progettazione. Particolare importanza verrà data alle **interazioni** che questi componenti dovranno avere con il resto del sistema.
 
 I [requisiti](https://github.com/ingegneria-sistemi-software-m/cargoservice/tree/master/requirements) affrontati nello sprint 1 saranno i seguenti:
@@ -48,8 +52,8 @@ La tipica sequenza di attività di _cargoservice_ è la seguente:
 2. dopo aver ricevuto la richiesta di carico, _cargoservice_ fa una richiesta a _productservice_ per **recuperare il peso del prodotto da caricare** associato al PID ricevuto dal cliente.
 
 3. _cargoservice_ riceva la risposta alla sua query da _productservice_. Quest'ultima può contenere:
-    - un errore in caso il PID inviato dal cliente non corrisponda a nessun prodotto registrato nel DB. **In questo caso _cargoservice_ può già rispondere al cliente con un opportuno messaggio di errore**
-    - il peso del prodotto 
+    - un errore in caso il PID inviato dal cliente non sia registrato nel DB. **In questo caso _cargoservice_ può rispondere al cliente con un opportuno messaggio di errore**
+    - il peso del prodotto in ogni altro caso
 
 4. dopo aver recuperato il peso del prodotto da caricare, _cargoservice_  può passare a verificare se lo **stato del _deposito_ permette di soddisfare la richiesta**. Si è definito nello sprint 0 che il mantenimento dello stato del _deposito_ è responsabilità del componente _hold_; di conseguenza, _cargoservice_ invierà a quest'ultimo un messaggio contenente il peso del prodotto da caricare. Si possono verificare tre casi:
     - richiesta non soddisfacibile in quanto si eccederebbe il peso _MaxLoad_ del deposito. _Hold_ risponde con un opportuno messaggio di errore
@@ -73,10 +77,7 @@ Si sarebbe potuto rendere il _cargorobot_ un mero esecutore di comandi, aggiunge
 
 
 ### Nuovi Messaggi
-Nello [Sprint 0](https://github.com/ingegneria-sistemi-software-m/cargoservice/tree/master/sprint0/sprint0.pdf) si erano definiti i messaggi con cui interagire con: _cargoservice_, _productservice_ e _basicrobot_. 
-
-L'analisi della sequenza di attività del _cargoservice_ suggerisce dei nuovi messaggi. In particolare, abbiamo:
-
+Nello [Sprint 0](https://github.com/ingegneria-sistemi-software-m/cargoservice/tree/master/sprint0/sprint0.pdf) si erano definiti i messaggi con cui interagire con: _cargoservice_, _productservice_ e _basicrobot_. L'analisi della sequenza di attività del _cargoservice_ suggerisce i seguenti nuovi messaggi.
 
 **Messaggi per l'interazione con hold**
 ```
@@ -92,12 +93,133 @@ Reply   load_operation_complete : load_operation_complete(OK) for handle_load_op
 ```
 
 
-
 ### Modello 
-La sequenza di attività suggerisce gli stati dell'attore QAK con cui modellare cargoservice
+L'analisi della sequenza di attività suggerisce anche gli stati dell'attore QAK con cui modellare cargoservice
 
 
+```
+QActor cargoservice context ctx_cargoservice {
+	[#
+		var Cur_prod_PID = -1
+		var Cur_prod_weight = -1
+	#] 
+	
+	State s0 initial{
+		println("$name | STARTS") color blue
+	} 
+	Goto wait_request
+	
+	
+	/* inizio ciclo di servizio */
+	
+	State wait_request{
+		println("$name | waiting for request") color blue
+	}
+	Transition t0
+	   whenRequest load_product -> get_prod_weight
 
+
+	/* Tento di recuperare il peso del prodotto richiesto */
+	
+	State get_prod_weight {
+		onMsg( load_product : load_product(PID) ) {
+			[# Cur_prod_PID = payloadArg(0).toInt() #]
+			println("$name | checking with productservice
+                     for the weight of PID: $Cur_prod_PID") color blue
+			
+			request productservice -m getProduct : product($Cur_prod_PID)
+		}
+	}
+	Transition t0
+	   whenReply getProductAnswer -> check_prod_answer
+
+
+	State check_prod_answer {
+		onMsg( getProductAnswer : product( JSonString ) ) {
+			[# 
+				val jsonStr = payloadArg(0)
+				Cur_prod_weight = Product.getJsonInt(jsonStr, "weight")
+			#]
+			
+			println("$name | the weight of PID: $Cur_prod_PID") color blue
+		}
+	}	
+	Goto reserve_slot if [# Cur_prod_weight > 0 #] else get_weight_fail
+
+	
+	State get_weight_fail {
+		[# 
+			val Causa = "Non è stato possibile recuperare il peso di 
+                         PID: $Cur_prod_PID in quanto non registrato
+                         dentro a productservice."
+		#]
+		println("$name | $Causa") color red
+		
+		replyTo load_product with load_refused : load_refused($Causa)
+	}
+    Goto wait_request
+	
+	
+	/* Tento di prenotare uno slot */
+
+	State reserve_slot {
+		println("$name | checking with hold if a reservation with 
+                 (PID: $Cur_prod_PID, KG: $Cur_prod_weight)
+                 is possible") color blue
+		
+		request hold -m reserve_slot : reserve_slot($Cur_prod_weight)
+	}
+    Transition t0
+	   whenReply reserve_slot_success -> load_cargo
+	   whenReply reserve_slot_fail	  -> reserve_slot_fail
+    
+
+    State reserve_slot_fail {
+		onMsg( reserve_slot_fail : reserve_slot_fail(CAUSA) ) {
+			[# 
+				val Causa = payloadArg(0) 
+				val CausaMsg = "impossibile prenotare uno slot per
+                                (PID: $Cur_prod_PID, KG: $Cur_prod_weight).
+                                \n\tCausa: $Causa"
+			#]
+			println("$name | $CausaMsg") color red
+			
+			replyTo load_product with load_refused : load_refuse($CausaMsg)
+		}
+	}
+    Goto wait_request
+	
+
+	/* Richiesta soddisfacibile */
+
+	State load_cargo {
+		onMsg( reserve_slot_success : reserve_slot_success(SLOT) ) {
+			[# 
+				val Reserved_slot = payloadArg(0)
+			#]
+			// rispondo al cliente
+			println("$name | (PID: $Cur_prod_PID, KG: $Cur_prod_weight)
+                     is going to be placed in slot: $Reserved_slot")
+                     color green
+			replyTo load_product with load_accepted : 
+                                      load_accepted($Reserved_slot)
+			// attivo il cargorobot
+			println("$name | waiting for load completion") color blue
+			request cargorobot -m handle_load_operation :
+                                  handle_load_operation($Reserved_slot)
+		}
+	}
+    Transition t0
+	   whenReply load_operation_complete -> load_request_done
+
+
+	State load_request_done {
+		println("$name | product (PID: $Cur_prod_PID, KG: $Cur_prod_weight)
+                 successfully loaded!") color green
+	}
+	Goto wait_request
+}
+```
 
 
 
