@@ -85,6 +85,8 @@ dependencies {
     //implementation group: 'org.json', name: 'json', version: '20220320'
     implementation 'com.googlecode.json-simple:json-simple:1.1.1'
     implementation group: 'org.json', name: 'json', version: '20180130'
+    
+    implementation 'com.google.code.gson:gson:2.10.1' // aggiungo gson
 
     /* COAP ********************************************************************************* */
     // https://mvnrepository.com/artifact/org.eclipse.californium/californium-core

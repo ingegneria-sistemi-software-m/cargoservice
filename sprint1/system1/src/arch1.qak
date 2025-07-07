@@ -236,27 +236,30 @@ QActor cargoservice context ctx_cargoservice {
 
 
 QActor cargorobot context ctx_cargoservice{
+import "main.java.*"
 	[#
 		// stato
-		val Step_len = 330
+		val config = CargoRobotConfigLoader.loadFromFile("./src/main/resources/cargorobot_conf.json");
 		
-		val positions = hashMapOf(
-			"home"    	to arrayOf(0, 0),
-			"io_port" 	to arrayOf(0, 4),
-		    "slot1"   	to arrayOf(1, 1),
-		    "slot2" 	to arrayOf(1, 3),
-		    "slot3" 	to arrayOf(4, 1),
-		    "slot4" 	to arrayOf(4, 3)
-		)
+		val Step_len = config.getStepLen()
 		
-		val directions = hashMapOf(
-			"home"    	to "down",
-			"io_port" 	to "down",
-		    "slot1"   	to "right",
-		    "slot2" 	to "right",
-		    "slot3" 	to "left",
-		    "slot4" 	to "left"
-		)
+//		val positions = hashMapOf(
+//			"home"    	to arrayOf(0, 0),
+//			"io_port" 	to arrayOf(0, 4),
+//		    "slot1"   	to arrayOf(1, 1),
+//		    "slot2" 	to arrayOf(1, 3),
+//		    "slot3" 	to arrayOf(4, 1),
+//		    "slot4" 	to arrayOf(4, 3)
+//		)
+//		
+//		val directions = hashMapOf(
+//			"home"    	to "down",
+//			"io_port" 	to "down",
+//		    "slot1"   	to "right",
+//		    "slot2" 	to "right",
+//		    "slot3" 	to "left",
+//		    "slot4" 	to "left"
+//		)
 
 		lateinit var Destination : String
 		lateinit var Reserved_slot : String
@@ -269,10 +272,8 @@ QActor cargorobot context ctx_cargoservice{
 	State s0 initial {
 		println("$name | STARTS") color magenta
 		
-		// TODO: leggi config
-				
 		println("$name | $MyName engaging ... ") color yellow 
-		request basicrobot -m engage : engage($MyName, $Step_len) // durata del passo configurabile?
+		request basicrobot -m engage : engage($MyName, $Step_len)
 	}
 	Transition t0
 		whenReply engagedone    -> wait_request  
@@ -307,7 +308,7 @@ QActor cargorobot context ctx_cargoservice{
 								
 				// il doppio !! serve a dire al compilatore Kotlin di stare tranquillo 
 				// e di recuperare il valore dalla mappa anche senza fare dei null-check
-				val coords = positions[Reserved_slot]!!
+				val coords = config.getPositions()[Reserved_slot]!!
 				val X = coords[0]
 				val Y = coords[1]
 			#]
@@ -321,7 +322,7 @@ QActor cargorobot context ctx_cargoservice{
 			// aggiorno la mia destinazione per ricordarmi dove devo andare in caso di interruzioni
 			Destination = "io_port"
 			
-			val coords = positions[Destination]!!
+			val coords = config.getPositions()[Destination]!!
 			val X = coords[0]
 			val Y = coords[1]
 		#]
@@ -343,7 +344,7 @@ QActor cargorobot context ctx_cargoservice{
 		[# 
 			moving = false
 			
-			val Direction = directions[Destination]!!
+			val Direction = config.getDirections()[Destination]!!
 		#]
 		forward basicrobot -m setdirection : dir($Direction)
 		
@@ -385,7 +386,7 @@ QActor cargorobot context ctx_cargoservice{
 			// aggiorno la mia destinazione per ricordarmi dove devo andare in caso di interruzioni
 			Destination = Reserved_slot
 			
-			val coords = positions[Destination]!!
+			val coords = config.getPositions()[Destination]!!
 			val X = coords[0]
 			val Y = coords[1]
 		#]
@@ -407,7 +408,7 @@ QActor cargorobot context ctx_cargoservice{
 		[# 
 			moving = false
 			
-			val Direction = directions[Destination]!!
+			val Direction = config.getDirections()[Destination]!!
 		#]
 		forward basicrobot -m setdirection : dir($Direction)
 		
@@ -442,7 +443,7 @@ QActor cargorobot context ctx_cargoservice{
 			// aggiorno la mia destinazione per ricordarmi dove devo andare in caso di interruzioni
 			Destination = "home"
 			
-			val coords = positions[Destination]!!
+			val coords = config.getPositions()[Destination]!!
 			val X = coords[0]
 			val Y = coords[1]
 		#]
@@ -475,7 +476,7 @@ QActor cargorobot context ctx_cargoservice{
 								
 				// il doppio !! serve a dire al compilatore Kotlin di stare tranquillo 
 				// e di recuperare il valore dalla mappa anche senza fare dei null-check
-				val coords = positions[Reserved_slot]!!
+				val coords = config.getPositions()[Reserved_slot]!!
 				val X = coords[0]
 				val Y = coords[1]
 			#]
@@ -502,7 +503,7 @@ QActor cargorobot context ctx_cargoservice{
    		[# 
    			moving = false
    			
-   			val Direction = directions[Destination]!!
+   			val Direction = config.getDirections()[Destination]!!
 		#]
 		forward basicrobot -m setdirection : dir($Direction)
    		// anche se estremamente improbabile, anche durante questo mini-stato 
@@ -537,7 +538,7 @@ QActor cargorobot context ctx_cargoservice{
 		// altrimenti rimane fermo dove è stato interrotto
 		if [# moving #] {
 			[#
-				val coords = positions[Destination]!!
+				val coords = config.getPositions()[Destination]!!
 				val X = coords[0]
 				val Y = coords[1]
 			#]
@@ -695,43 +696,45 @@ QActor sonar_mock context ctx_cargoservice{
 QActor external_client context ctx_cargoservice{
  	State s0 initial {
  		println("$name | STARTS") color cyan
-  	} Goto work1
+  	} 
+//  	Goto work1 // commenta quando vuoi mandare richieste con i test
   	
   	// client mock che manda 4 richieste
-  	
-  	State work1 {
- 		println("$name | sends request") color cyan
- 		request cargoservice -m load_product: load_product(17)
- 		delay 2000
-  	} 
-  	Transition t0
-	   whenReply load_accepted -> work2
-	   whenReply load_refused  -> work2
-	   
-	   
-	State work2 {
- 		println("$name | sends request") color cyan
- 		request cargoservice -m load_product: load_product(10)
- 		delay 2000
-  	} 
-  	Transition t0
-	   whenReply load_accepted -> work3
-	   whenReply load_refused  -> work3
-	   
-	
-	State work3 {
- 		println("$name | sends request") color cyan
- 		request cargoservice -m load_product: load_product(17)
- 		delay 2000
-  	} 
-  	Transition t0
-	   whenReply load_accepted -> work4
-	   whenReply load_refused  -> work4
-	   
-	
-	State work4 {
- 		println("$name | sends request") color cyan
- 		request cargoservice -m load_product: load_product(17)
- 		delay 2000
-  	} 
+//  	
+//  	State work1 {
+//  		println("sono io il colpevole!!!") color red
+// 		println("$name | sends request") color cyan
+// 		request cargoservice -m load_product: load_product(17)
+// 		delay 2000
+//  	} 
+//  	Transition t0
+//	   whenReply load_accepted -> work2
+//	   whenReply load_refused  -> work2
+//	   
+//	   
+//	State work2 {
+// 		println("$name | sends request") color cyan
+// 		request cargoservice -m load_product: load_product(10)
+// 		delay 2000
+//  	} 
+//  	Transition t0
+//	   whenReply load_accepted -> work3
+//	   whenReply load_refused  -> work3
+//	   
+//	
+//	State work3 {
+// 		println("$name | sends request") color cyan
+// 		request cargoservice -m load_product: load_product(17)
+// 		delay 2000
+//  	} 
+//  	Transition t0
+//	   whenReply load_accepted -> work4
+//	   whenReply load_refused  -> work4
+//	   
+//	
+//	State work4 {
+// 		println("$name | sends request") color cyan
+// 		request cargoservice -m load_product: load_product(17)
+// 		delay 2000
+//  	} 
 }

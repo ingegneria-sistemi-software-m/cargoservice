@@ -645,7 +645,12 @@ QActor cargorobot context ctx_cargoservice{
 ## Piano di test
 
 
+// richiestata rifiutata perchè prodotto non esiste
 
+
+
+
+// test delle interruzioni tramite sonar_mock
 
 
 

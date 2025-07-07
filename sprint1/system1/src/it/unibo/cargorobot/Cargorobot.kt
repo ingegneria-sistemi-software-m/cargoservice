@@ -19,6 +19,7 @@ import org.json.simple.JSONObject
 
 
 //User imports JAN2024
+import main.java.*
 
 class Cargorobot ( name: String, scope: CoroutineScope, isconfined: Boolean=false, isdynamic: Boolean=false ) : 
           ActorBasicFsm( name, scope, confined=isconfined, dynamically=isdynamic ){
@@ -31,25 +32,27 @@ class Cargorobot ( name: String, scope: CoroutineScope, isconfined: Boolean=fals
 		//IF actor.withobj !== null val actor.withobj.name» = actor.withobj.method»ENDIF
 		
 				// stato
-				val Step_len = 330
+				val config = CargoRobotConfigLoader.loadFromFile("./src/main/resources/cargorobot_conf.json");
 				
-				val positions = hashMapOf(
-					"home"    	to arrayOf(0, 0),
-					"io_port" 	to arrayOf(0, 4),
-				    "slot1"   	to arrayOf(1, 1),
-				    "slot2" 	to arrayOf(1, 3),
-				    "slot3" 	to arrayOf(4, 1),
-				    "slot4" 	to arrayOf(4, 3)
-				)
+				val Step_len = config.getStepLen()
 				
-				val directions = hashMapOf(
-					"home"    	to "down",
-					"io_port" 	to "down",
-				    "slot1"   	to "right",
-				    "slot2" 	to "right",
-				    "slot3" 	to "left",
-				    "slot4" 	to "left"
-				)
+		//		val positions = hashMapOf(
+		//			"home"    	to arrayOf(0, 0),
+		//			"io_port" 	to arrayOf(0, 4),
+		//		    "slot1"   	to arrayOf(1, 1),
+		//		    "slot2" 	to arrayOf(1, 3),
+		//		    "slot3" 	to arrayOf(4, 1),
+		//		    "slot4" 	to arrayOf(4, 3)
+		//		)
+		//		
+		//		val directions = hashMapOf(
+		//			"home"    	to "down",
+		//			"io_port" 	to "down",
+		//		    "slot1"   	to "right",
+		//		    "slot2" 	to "right",
+		//		    "slot3" 	to "left",
+		//		    "slot4" 	to "left"
+		//		)
 		
 				lateinit var Destination : String
 				lateinit var Reserved_slot : String
@@ -94,7 +97,7 @@ class Cargorobot ( name: String, scope: CoroutineScope, isconfined: Boolean=fals
 																
 												// il doppio !! serve a dire al compilatore Kotlin di stare tranquillo 
 												// e di recuperare il valore dalla mappa anche senza fare dei null-check
-												val coords = positions[Reserved_slot]!!
+												val coords = config.getPositions()[Reserved_slot]!!
 												val X = coords[0]
 												val Y = coords[1]
 								CommUtils.outmagenta("$name | cargorobot reserved_slot is $Reserved_slot = ($X, $Y)")
@@ -104,7 +107,7 @@ class Cargorobot ( name: String, scope: CoroutineScope, isconfined: Boolean=fals
 									// aggiorno la mia destinazione per ricordarmi dove devo andare in caso di interruzioni
 									Destination = "io_port"
 									
-									val coords = positions[Destination]!!
+									val coords = config.getPositions()[Destination]!!
 									val X = coords[0]
 									val Y = coords[1]
 						request("moverobot", "moverobot($X,$Y)" ,"basicrobot" )  
@@ -125,7 +128,7 @@ class Cargorobot ( name: String, scope: CoroutineScope, isconfined: Boolean=fals
 						 
 									moving = false
 									
-									val Direction = directions[Destination]!!
+									val Direction = config.getDirections()[Destination]!!
 						forward("setdirection", "dir($Direction)" ,"basicrobot" ) 
 						if(  container_present  
 						 ){ container_present = false  
@@ -162,7 +165,7 @@ class Cargorobot ( name: String, scope: CoroutineScope, isconfined: Boolean=fals
 									// aggiorno la mia destinazione per ricordarmi dove devo andare in caso di interruzioni
 									Destination = Reserved_slot
 									
-									val coords = positions[Destination]!!
+									val coords = config.getPositions()[Destination]!!
 									val X = coords[0]
 									val Y = coords[1]
 						CommUtils.outmagenta("$name | going to my reserved slot: $Reserved_slot = ($X, $Y)")
@@ -184,7 +187,7 @@ class Cargorobot ( name: String, scope: CoroutineScope, isconfined: Boolean=fals
 						 
 									moving = false
 									
-									val Direction = directions[Destination]!!
+									val Direction = config.getDirections()[Destination]!!
 						forward("setdirection", "dir($Direction)" ,"basicrobot" ) 
 						CommUtils.outmagenta("$name | laying down the container")
 						delay(3000) 
@@ -208,7 +211,7 @@ class Cargorobot ( name: String, scope: CoroutineScope, isconfined: Boolean=fals
 									// aggiorno la mia destinazione per ricordarmi dove devo andare in caso di interruzioni
 									Destination = "home"
 									
-									val coords = positions[Destination]!!
+									val coords = config.getPositions()[Destination]!!
 									val X = coords[0]
 									val Y = coords[1]
 						request("moverobot", "moverobot($X,$Y)" ,"basicrobot" )  
@@ -235,7 +238,7 @@ class Cargorobot ( name: String, scope: CoroutineScope, isconfined: Boolean=fals
 																
 												// il doppio !! serve a dire al compilatore Kotlin di stare tranquillo 
 												// e di recuperare il valore dalla mappa anche senza fare dei null-check
-												val coords = positions[Reserved_slot]!!
+												val coords = config.getPositions()[Reserved_slot]!!
 												val X = coords[0]
 												val Y = coords[1]
 								CommUtils.outmagenta("$name | cargorobot reserved_slot is $Reserved_slot = ($X, $Y)")
@@ -258,7 +261,7 @@ class Cargorobot ( name: String, scope: CoroutineScope, isconfined: Boolean=fals
 						 
 						   			moving = false
 						   			
-						   			val Direction = directions[Destination]!!
+						   			val Direction = config.getDirections()[Destination]!!
 						forward("setdirection", "dir($Direction)" ,"basicrobot" ) 
 						forward("continue", "continue(si)" ,name ) 
 						//genTimer( actor, state )
@@ -287,7 +290,7 @@ class Cargorobot ( name: String, scope: CoroutineScope, isconfined: Boolean=fals
 						CommUtils.outgreen("$name | riprendo")
 						if(  moving  
 						 ){
-										val coords = positions[Destination]!!
+										val coords = config.getPositions()[Destination]!!
 										val X = coords[0]
 										val Y = coords[1]
 						request("moverobot", "moverobot($X,$Y)" ,"basicrobot" )  

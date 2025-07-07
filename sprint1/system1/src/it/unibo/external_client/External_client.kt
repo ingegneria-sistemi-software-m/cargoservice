@@ -38,57 +38,6 @@ class External_client ( name: String, scope: CoroutineScope, isconfined: Boolean
 					//After Lenzi Aug2002
 					sysaction { //it:State
 					}	 	 
-					 transition( edgeName="goto",targetState="work1", cond=doswitch() )
-				}	 
-				state("work1") { //this:State
-					action { //it:State
-						CommUtils.outcyan("$name | sends request")
-						request("load_product", "load_product(17)" ,"cargoservice" )  
-						delay(2000) 
-						//genTimer( actor, state )
-					}
-					//After Lenzi Aug2002
-					sysaction { //it:State
-					}	 	 
-					 transition(edgeName="t044",targetState="work2",cond=whenReply("load_accepted"))
-					transition(edgeName="t045",targetState="work2",cond=whenReply("load_refused"))
-				}	 
-				state("work2") { //this:State
-					action { //it:State
-						CommUtils.outcyan("$name | sends request")
-						request("load_product", "load_product(10)" ,"cargoservice" )  
-						delay(2000) 
-						//genTimer( actor, state )
-					}
-					//After Lenzi Aug2002
-					sysaction { //it:State
-					}	 	 
-					 transition(edgeName="t046",targetState="work3",cond=whenReply("load_accepted"))
-					transition(edgeName="t047",targetState="work3",cond=whenReply("load_refused"))
-				}	 
-				state("work3") { //this:State
-					action { //it:State
-						CommUtils.outcyan("$name | sends request")
-						request("load_product", "load_product(17)" ,"cargoservice" )  
-						delay(2000) 
-						//genTimer( actor, state )
-					}
-					//After Lenzi Aug2002
-					sysaction { //it:State
-					}	 	 
-					 transition(edgeName="t048",targetState="work4",cond=whenReply("load_accepted"))
-					transition(edgeName="t049",targetState="work4",cond=whenReply("load_refused"))
-				}	 
-				state("work4") { //this:State
-					action { //it:State
-						CommUtils.outcyan("$name | sends request")
-						request("load_product", "load_product(17)" ,"cargoservice" )  
-						delay(2000) 
-						//genTimer( actor, state )
-					}
-					//After Lenzi Aug2002
-					sysaction { //it:State
-					}	 	 
 				}	 
 			}
 		}
