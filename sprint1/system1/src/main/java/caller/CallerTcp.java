@@ -23,10 +23,8 @@ public class CallerTcp  {
 
 
 	public void activate() throws Exception {
-		String info = sysUtil.toPrologStr( "{\"productId\":31,\"name\":\"p31\",\"weight\":311}", true );
-		
 		CommUtils.outblue(name + " | send request");
-	 	IApplMessage getreq = CommUtils.buildRequest (name, "load_product","load_product(3)", "cargoservice");
+	 	IApplMessage getreq = CommUtils.buildRequest (name, "load_product","load_product(17)", "cargoservice");
         IApplMessage answer = commChannel.request(getreq);  //raise exception
         CommUtils.outgreen(name + " | response" + answer);
  		CommUtils.outgreen(name + " | response: " + answer.msgContent());	

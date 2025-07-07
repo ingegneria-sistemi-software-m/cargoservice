@@ -83,7 +83,7 @@ Reply   envmap        : envmap(MAP)  for getenvmap
 Context ctx_cargoservice 			ip [host="localhost" port=8000]
 //Context ctx_cargoservice_clients 	ip [host="localhost" port=9000]
 //Context ctx_iodevices 				ip [host="localhost" port=8001]
-Context ctx_basicrobot     ip [host="127.0.0.1"  	  port=8020]
+Context ctx_basicrobot     ip [host="my-basicrobot"   port=8020]
 Context ctx_productservice ip [host="cargoserviceqak" port=8111]  
 
 ExternalQActor basicrobot     context ctx_basicrobot   
