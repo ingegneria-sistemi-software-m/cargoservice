@@ -13,3 +13,7 @@ h4 {
 .page-break {
   page-break-before: always;
 }
+
+.alarm {
+  color: red;
+} 

@@ -97,7 +97,7 @@ Reply   load_operation_complete : load_operation_complete(OK) for handle_load_op
 L'analisi della sequenza di attività suggerisce anche gli stati dell'attore QAK con cui modellare cargoservice
 
 
-```
+```Java
 QActor cargoservice context ctx_cargoservice {
 	[#
 		var Cur_prod_PID = -1
@@ -309,7 +309,7 @@ Questi messaggi sono stati modellati come eventi in quanto è presumibile che av
 ### Modello cargorobot
 L'analisi fatta fino ha portato al seguente modello.
 
-```
+```Java
 QActor cargorobot context ctx_cargoservice{
 	[#
 		// stato
@@ -368,34 +368,34 @@ QActor cargorobot context ctx_cargoservice{
 	/* vado a prendere il container */
 	
 	State go_to_io_port {
-		// aggiorno il mio stato recuperando le coordinato dello slot prenotato
+		// aggiorno il mio stato con le coordinato dello slot prenotato
 		onMsg( handle_load_operation : handle_load_operation(SLOT) ) {
 			[# 
-				Reserved_slot = payloadArg(0)
-								
-				// il doppio !! serve a dire al compilatore Kotlin di stare tranquillo 
-				// e di recuperare il valore dalla mappa anche senza fare dei null-check
+				Reserved_slot = payloadArg(0)	
+				// il doppio !! serve a dire al compilatore Kotlin di stare
+				// tranquillo e di recuperare il valore dalla mappa anche
+				// senza fare dei null-check
 				val coords = positions[Reserved_slot]!!
 				val X = coords[0]
 				val Y = coords[1]
 			#]
 			// DEBUG: 
-			println("$name | cargorobot reserved_slot is $Reserved_slot = ($X, $Y)") color magenta
+			println("$name | cargorobot reserved_slot is
+					 $Reserved_slot = ($X, $Y)") color magenta
 		}
 		
 		// vado verso la io-port
 		println("$name | going to io-port") color magenta
 		[#
-			// aggiorno la mia destinazione per ricordarmi dove devo andare in caso di interruzioni
+			// aggiorno la mia destinazione per ricordarmi dove devo andare
+			// in caso di interruzioni
 			Destination = "io_port"
-			
 			val coords = positions[Destination]!!
 			val X = coords[0]
 			val Y = coords[1]
 		#]
 		
     	request basicrobot -m  moverobot : moverobot($X, $Y)
-    	
 		[# moving = true #]
  	}  	
   	Transition t0 
@@ -409,12 +409,12 @@ QActor cargorobot context ctx_cargoservice{
 		println("$name | arrived at io-port") color magenta
 		[# 
 			moving = false
-			
 			val Direction = directions[Destination]!!
 		#]
 		forward basicrobot -m setdirection : dir($Direction)
 		
-		// se il container c'è gia, mi mando un autodispatch cosi da non dover aspettare
+		// se il container c'è gia, mi mando un autodispatch
+		// cosi da non dover aspettare
 		if [# container_present #] {
 			[# container_present = false #]
 			autodispatch continue : continue(si)
@@ -428,34 +428,35 @@ QActor cargorobot context ctx_cargoservice{
 
 	State pick_up_container {
 		println("$name | picking up container") color magenta
-		[# moving = false #] // non cambia rispetto allo stato precedente ma meglio essere espliciti
-		
-		delay 3000 // tempo arbitrario per caricare il container sul cargorobot
-		
-		// durante il carico del container potrebbe essere arrivato una interruzione,
-		// mi mando un messaggio per ricordarmi che posso procedere
+		[# moving = false #]
+		// tempo per caricare il container sul cargorobot
+		delay 3000 
+		// durante il carico del container potrebbe essere arrivato una
+		// interruzione, mi mando un messaggio per ricordarmi che posso
+		// procedere
 		autodispatch continue : continue(si)
 	}
 	Transition t0
-		whenInterruptEvent interrompi_tutto -> wait_resume_msg
+		whenInterruptEvent interrompi_tutto  -> wait_resume_msg
 		whenInterruptEvent container_arrived -> container_arrived_handler
 		whenInterruptEvent container_absent  -> container_absent_handler
-		whenMsg continue 					-> go_to_reserved_slot 
+		whenMsg continue 					 -> go_to_reserved_slot 
 		
 
 	/* vado a depositare il container */
 	
 	State go_to_reserved_slot {
 		[#
-			// aggiorno la mia destinazione per ricordarmi dove devo andare in caso di interruzioni
+			// aggiorno la mia destinazione per ricordarmi dove devo andare
+			// in caso di interruzioni
 			Destination = Reserved_slot
-			
 			val coords = positions[Destination]!!
 			val X = coords[0]
 			val Y = coords[1]
 		#]
 		
-		println("$name | going to my reserved slot: $Reserved_slot = ($X, $Y)") color magenta
+		println("$name | going to my reserved slot:
+				 $Reserved_slot = ($X, $Y)") color magenta
 		
     	request basicrobot -m  moverobot : moverobot($X, $Y)
     	[# moving = true #]
@@ -471,15 +472,14 @@ QActor cargorobot context ctx_cargoservice{
 		println("$name | arrived at reserved slot") color magenta
 		[# 
 			moving = false
-			
 			val Direction = directions[Destination]!!
 		#]
 		forward basicrobot -m setdirection : dir($Direction)
 		
 		// scarico il container
 		println("$name | laying down the container") color magenta
-		delay 3000 // tempo arbitrario per scaricare il container dal cargorobot
-		 
+		// tempo per scaricare il container dal cargorobot
+		delay 3000 		 
 		// duranto lo scarico potrebbe essere arrivato una interruzione,
 		// mi mando un messaggio per ricordarmi che posso procedere
 		autodispatch continue : continue(si)
@@ -491,19 +491,20 @@ QActor cargorobot context ctx_cargoservice{
 		whenMsg continue 					 -> back_to_home 
  	
    	
-   	/* torno a casa */
+	/* torno a casa */
    	
   	State back_to_home {
   		// rispondo a cargoservice
   		println("$name | load operation completed") color magenta
-		replyTo handle_load_operation with load_operation_complete : load_operation_complete(ok)
+		replyTo handle_load_operation with
+			 	load_operation_complete : load_operation_complete(ok)
 		
 		// mi avvio verso casa
 		println("$name | Back to home") color magenta
 		[#
-			// aggiorno la mia destinazione per ricordarmi dove devo andare in caso di interruzioni
+			// aggiorno la mia destinazione per ricordarmi dove devo andare
+			// in caso di interruzioni
 			Destination = "home"
-			
 			val coords = positions[Destination]!!
 			val X = coords[0]
 			val Y = coords[1]
@@ -517,54 +518,84 @@ QActor cargorobot context ctx_cargoservice{
   		whenInterruptEvent container_arrived -> container_arrived_handler
 		whenInterruptEvent container_absent  -> container_absent_handler
 		whenReply moverobotdone 			 -> at_home 
-        whenRequest handle_load_operation    -> stop_going_to_home // servo subito eventuali richieste in coda 
+		// servo subito eventuali richieste in coda 
+  		whenRequest handle_load_operation    -> stop_going_to_home 
   		
 
   	State stop_going_to_home {
-   		println("$name | stop going to home and start serving new request immediately") color magenta
+   		println("$name | stop going to home and 
+				 start serving new request immediately") color magenta
    		emit alarm : alarm(blocca) // blocco il basicrobot
    		[# moving = false #]
    		
-   		// aggiorno il mio slot prenotato (non viene fatto in 'go_to_io_port' dato che consumo
-   		// la richiesta 'handle_load_operation' prima di arrivarci, e quindi il relativo blocco 
-   		// onMsg{} di 'go_to_io_port' non viene eseguito)
+   		// aggiorno il mio slot prenotato. Devo farlo per forza qua! 
+   		// è solo questo lo stato in cui ho accesso alla richiesta
+   		// 'handle_load_operation(SLOT)'
    		onMsg( handle_load_operation : handle_load_operation(SLOT) ) { 
 			[# 
-				Reserved_slot = payloadArg(0)
-								
-				// il doppio !! serve a dire al compilatore Kotlin di stare tranquillo 
-				// e di recuperare il valore dalla mappa anche senza fare dei null-check
+				Reserved_slot = payloadArg(0)	
+				// il doppio !! serve a dire al compilatore Kotlin di stare
+				// tranquillo e di recuperare il valore dalla mappa anche
+				// senza fare dei null-check
 				val coords = positions[Reserved_slot]!!
 				val X = coords[0]
 				val Y = coords[1]
 			#]
 			// DEBUG: 
-			println("$name | cargorobot reserved_slot is $Reserved_slot = ($X, $Y)") color magenta
-		}
-   		
-   		// anche se estremamente improbabile, anche durante questo mini-stato 
-   		// potrebbe essere arrivata una interruzione.
-		// Mi mando un messaggio per ricordarmi che posso procedere
-		autodispatch continue : continue(si)
+			println("$name | cargorobot reserved_slot is 
+			  		 $Reserved_slot = ($X, $Y)") color magenta
+		}		
    	}
    	Transition t0
 	   	whenInterruptEvent interrompi_tutto  -> wait_resume_msg
 		whenInterruptEvent container_arrived -> container_arrived_handler
 		whenInterruptEvent container_absent  -> container_absent_handler
-		whenMsg continue					 -> go_to_io_port
-  		
+		// causato da alarm quando viene emesso mentre si sta facendo
+		// l'ultimo passo del piano e si riesce quindi a completarlo
+		whenReply moverobotdone 			 -> stopped_for_next_request  
+		// causato da alarm quando si interrompe un piano a metà
+   		whenReply moverobotfailed 			 -> stopped_for_next_request  
+		
   	
+  	// NB: ho bisogno di questo stato per consumare le risposte 
+	// 'moverobotdone' e 'moverobotfailed' prodotte dall'emissione 
+	// di alarm mentre il robot è in movimento fatta dentro allo 
+	// stato 'stop_going_to_home'.
+  	//
+	//  Se non consumassi queste risposte, esse rimarrebbero nella coda
+	//  di cargorobot e provocorebbero delle transizioni non previste
+  	State stopped_for_next_request{
+		// vado verso la io-port
+		println("$name | going to io-port") color magenta
+		[#
+			// aggiorno la mia destinazione per ricordarmi dove devo andare
+			// in caso di interruzioni
+			Destination = "io_port"
+			val coords = positions[Reserved_slot]!!
+			val X = coords[0]
+			val Y = coords[1]
+		#]
+		
+    	request basicrobot -m  moverobot : moverobot($X, $Y)
+		[# moving = true #]
+   	}
+   	Transition t0
+   		whenInterruptEvent interrompi_tutto  -> wait_resume_msg
+		whenInterruptEvent container_arrived -> container_arrived_handler
+		whenInterruptEvent container_absent  -> container_absent_handler
+		whenReply moverobotdone 			 -> arrived_at_io_port  
+
+
   	State at_home{
    		println("$name | at home") color magenta
    		forward basicrobot -m setdirection : dir(down)
    		[# 
    			moving = false
-   			
    			val Direction = directions[Destination]!!
 		#]
 		forward basicrobot -m setdirection : dir($Direction)
-   		// anche se estremamente improbabile, anche durante questo mini-stato 
-   		// potrebbe essere arrivata una interruzione.
+   		// anche se estremamente improbabile, anche durante questo 
+		// mini-stato potrebbe essere arrivata una interruzione.
 		// Mi mando un messaggio per ricordarmi che posso procedere
 		autodispatch continue : continue(si)
    	}
@@ -575,25 +606,47 @@ QActor cargorobot context ctx_cargoservice{
    		whenMsg continue 					 -> wait_request
    	
    	
+   	
+   	
    	/* gestisco le interruzioni */
    	
    	State wait_resume_msg {
    		println("$name | sonar malfunzionante, mi fermo") color red
-   		
    		emit alarm : alarm(blocca) // blocco il basicrobot
 	}
 	Transition t0
+		// ho bisogno anche di questa transizione in quanto non è detto che
+		// il robot venga interrotto mentre è in movimento. 
+		// 
+		// Se cargorobot viene bloccato, ad esempio, mentre è in attesa
+		// all'io-port l'emissione di alarm non scatenerà le reply sotto
 		whenEvent riprendi_tutto -> resume
-	
+		// causato da alarm quando viene emesso mentre si sta facendo 
+		// l'ultimo passo del piano e si riesce quindi a completarlo
+		whenReply moverobotdone   -> stopped_for_sonar_fault  
+		// causato da alarm quando si interrompe un piano a metà
+   		whenReply moverobotfailed -> stopped_for_sonar_fault  
+		
+  	
+  	// NB: ho bisogno di questo stato per consumare le risposte 
+	// 'moverobotdone' e 'moverobotfailed' prodotte da alarm in 
+	// 'wait_resume_msg'.
+  	// Se non le consumassi queste risposte rimarrebbero nella coda
+	// di cargorobot e provocorebbero delle transizioni non previste
+  	State stopped_for_sonar_fault{
+  		// devo solo aspettare
+   	}
+   	Transition t0
+   		whenEvent riprendi_tutto -> resume
+   		
 	
 	State resume {
 		println("$name | riprendo") color green
-		
-		// se il basic robot si stava muovendo, gli dico di nuovo dove deve andare
-		// altrimenti rimane fermo dove è stato interrotto
+		// se il basic robot si stava muovendo, gli dico di nuovo dove deve
+		// andare altrimenti rimane fermo dove è stato interrotto
 		if [# moving #] {
 			[#
-				val coords = positions[Destination]!!
+				val coords = config.getPositions()[Destination]!!
 				val X = coords[0]
 				val Y = coords[1]
 			#]
@@ -632,57 +685,244 @@ QActor cargorobot context ctx_cargoservice{
 
 
 
-
-
-
-
-
-
-
-
-
-
 ## Piano di test
+L'analisi del componente _cargoservice_ ha portato a definire il seguente nuovo test che si aggiunge a quelli presentati nello sprint 0. 
+
+#### richiesta rifiutata per prodotto inesistente in productservice
+```Java
+ 	@Test
+    public void testLoadRequestDeniedByInexistentProduct()
+		throws Exception
+	{
+        // Costruisci la richiesta con PID non registrato.
+        String requestStr = CommUtils.buildRequest("tester",
+                "load_product", "load_product(987)",
+                "cargoservice").toString();
+        System.out.println("Richiesta: " + requestStr);
+        // Risposta negativa perchè il PID non è registrato 
+        String response = conn.request(requestStr);
+        System.out.println("Risposta: " + response);
+        
+        // 5. Verifica che sia stata rifiutata per la non registrazione 
+		// del prodotto  
+        assertTrue("TEST: richiesta rifiutata", 
+                 response.contains("load_refused") && 
+                 response.contains("non registrato"));
+    }
+```
 
 
-// richiestata rifiutata perchè prodotto non esiste
+Per quanto riguarda il _cargorobot_, **risulta difficile pensare a dei testi unitiari per collaudare il suo funzionamento**.
 
+Come alternativa, si è pensato semplicemente di osservare il suo comportamento in presenza degli attori mock: **_external\_client\_mock_**, **_hold\_mock_** e **_sonar\_mock_** che simulano gli eventi improvvisi a cui _cargorobot_ è sensibile. 
 
+Dopo svariate prove, e configurazioni diverse degli attori mock, si è raggiunta una confidenza soddisfacente del corretto funzionamento di _cargorobot_. 
 
+In seguito gli attori mock utilizzati.
 
-// test delle interruzioni tramite sonar_mock
+#### hold_mock
+```Java
+QActor hold_mock context ctx_cargoservice{
+	[# 
+		var Counter = 0
+	#]
+	
+	State s0 initial {
+		println("$name | STARTS")
+	} 
+	Goto wait_request
+	
+	State wait_request{
+		println("$name | waiting for request") color yellow
+	}
+	Transition t0
+	   whenRequest reserve_slot -> handle_request
+	  
+	State handle_request{
+		delay 1000
+		
+		// risposte mock
+		if [# Counter == 0 #] {
+			replyTo reserve_slot with reserve_slot_success :
+									  reserve_slot_success(slot1)
+		} 
+		if [# Counter == 1 #] {
+			replyTo reserve_slot with reserve_slot_success :
+									  reserve_slot_fail(troppo peso)
+		}
+		if [# Counter == 2 #] {
+			replyTo reserve_slot with reserve_slot_success :
+									  reserve_slot_success(slot3)
+		}
+		if [# Counter == 3 #] {
+			replyTo reserve_slot with reserve_slot_success :
+									  reserve_slot_fail(no slot liberi)
+		}
+		
+		[# 
+			Counter++ 
+			
+			if(Counter == 4)
+				Counter = 0
+		#]
+	}
+	Goto wait_request
+} 
+```
+
+#### sonar_mock
+```Java
+QActor sonar_mock context ctx_cargoservice{
+	[#
+		var counter = 0	
+	#]
+	
+ 	State s0 initial {
+ 		println("$name | STARTS") color yellow
+  	} 
+  	Goto work
+  	
+  	State work {
+  		// ogni 10s arriva un container
+  		delay 10000
+  		emit container_arrived : container_arrived(si) 
+  		[# counter ++ #]
+ 
+  		// mi guasto ogni due arrivi tanto
+  		if [# counter%2 == 0 #] {
+	    	println("$name | ALLARME") color red 	// DEBUG
+	 		emit interrompi_tutto : interrompi_tutto(si) 
+	 		
+	 		delay 3000
+	 		println("$name | A POSTO") color green 	// DEBUG
+	 		emit riprendi_tutto : riprendi_tutto(si) 
+  		}
+  	}
+  	Goto work
+}
+```
+
+#### external_client_mock
+```Java
+QActor external_client context ctx_cargoservice{
+ 	State s0 initial {
+		// cliente che mi manda 4 richieste una dietro l'altra
+ 		request cargoservice -m load_product: load_product(17)
+ 		request cargoservice -m load_product: load_product(18)
+ 		request cargoservice -m load_product: load_product(19)
+ 		request cargoservice -m load_product: load_product(20)
+  	}
+}
+```
+
 
 
 
 ## Progettazione
-Fase di progetto e realizzazione, che termina con il **deployment** del prodotto, unitamente a istruzioni (ad uso del committente) per la costruzione/esecuione del prdotto setsso.
+Uno dei vari pregi della modellazione di sistemi tramite il DSL QAK è che **i modelli prodotti sono eseguibili**. Questo significa la fase di progettazione viene largamente ridotta in quanto non è necessario pensare a **come** implementare quanto modellato.
+
+In questo sprint, l'unica modifica fatta in progettazione è stata quella di introdurre un **file di configurazione per il _cargorobot_** in cui specificare le coordinate e il direzionamento richiesto nelle posizioni notevoli nel _deposito_, e la lunghezza dello step. 
+
+```json
+//cargorobot_conf.json
+{
+  "Step_len": 330,
+  "positions": {
+    "home": [0, 0],
+    "io_port": [0, 4],
+    "slot1": [1, 1],
+    "slot2": [1, 3],
+    "slot3": [4, 1],
+    "slot4": [4, 3]
+  },
+  "directions": {
+    "home": "down",
+    "io_port": "down",
+    "slot1": "right",
+    "slot2": "right",
+    "slot3": "left",
+    "slot4": "left"
+  }
+}
+```
+
+A questo punto, tramite un POJO che carica il file di configurazione, la configurazione di _cargorobot_ diventa parametrica e non più hardcoded.
+
+```Java
+public class CargoRobotConfigLoader {
+    private int Step_len;
+    private Map<String, int[]> positions;
+    private Map<String, String> directions;
+
+    public int getStepLen() {
+        return Step_len;
+    }
+
+    public Map<String, int[]> getPositions() {
+        return positions;
+    }
+
+    public Map<String, String> getDirections() {
+        return directions;
+    }
+
+    // Metodo statico per caricare i dati dal file JSON
+    public static CargoRobotConfigLoader loadFromFile(String filePath)
+		throws IOException
+	{
+        Gson gson = new Gson();
+        try (FileReader reader = new FileReader(filePath)) {
+            return gson.fromJson(reader, CargoRobotConfigLoader.class);
+        }
+    }
+}
+```
 
 
-parla di un file di config
+### Distribuzione del sistema
+Rispetto allo sprint 0, _productservice_ e _basicrobot_ risultano risiedere in nodi distinti rispetto al resto del sistema. Questo perchè questi componenti sono dei servizi offerti dal committente tramite immagini Docker.
 
-parla di productservice e basicrobot usati come servizi esterni
+Questo non è problematico, grazie ad un altro pregio del metamodello QAK: la gestione facilitata della distribuzione/concentrazione degli attori.
 
-parla del bug di cargorobot durante il tentativo di servire richieste immediatamente durante la fase di ritorno
+In questo sprint è stato sufficiente includere nel modello QAK del sistema i contesti esterni (sfruttando la service discovery di Docker) e segnare _productservice_ e _basicrobot_ come **external actors**.
 
-parla di eventuali classi di supporto
+```Java
+Context ctx_cargoservice   	ip [host="localhost" port=8000]
+Context ctx_basicrobot     	ip [host="my-basicrobot"   port=8020]
+Context ctx_productservice 	ip [host="cargoserviceqak" port=8111]  
 
-ci sta anche lasciare inalterata della roba
+ExternalQActor basicrobot     context ctx_basicrobot   
+ExternalQActor productservice context ctx_productservice
+```
 
 
 
+### Deployment
+Il progetto contenente il modello QAK sviluppato in questo sprint è recuperabile alla [seguente repository github](https://github.com/ingegneria-sistemi-software-m/cargoservice/tree/sprint1/sprint1), dentro alla cartella "system1/".
+
+Per avviare il progetto:
+1. eseguire ```docker compose -f arch1.yaml up``` per lanciare svariati componenti del sistema come _cargorobot_ e _productservice_
+
+2. aggiungere qualche prodotto al db mongo appena avviato sfruttando [questo caller](https://github.com/anatali/issLab2025/blob/main/cargoserviceQak/src/main/java/caller/ProductServiceDiscoverCallerTcp.java)
+	- attenzione ai PID altrimenti tutte le richieste vengono rifiutate in quanto i prodotti non vengono trovati
+
+3. aprire il browser e digitare ```localhost:8090``` per visualizzare l'ambiente virtuale _WEnv_
+
+4. posizionarsi dentro alla cartella system1/
+
+5. eseguire ```./gradlew run``` per lanciare il resto del sistema
 
 
-## Deployment
-
+<h4 class="alarm">Nota:</h4>
+Si è tentato di containerizzare il contesto _ctx_cargoservice_ ma si è fallito in quanto la distribuzione creata da gradle era difettosa. Non si è capito il perchè... (magari se ne può discutere in un colloquio)
 
 
 
 
 
 ## Sintesi finale e nuova architettura
-Ogni SPRINT dovrebbe terminare con una pagina di sintesi che riporta l’architettura finale corrente del sistema (con i link al modello e ai Test). Questa pagina sarà l’inizio del documento relativo allo SPRINT successivo.
+In questo sprint 1 si sono implementati i componenti che definiscono il corebuisness del sistema: [_cargoservice_](#analisi-del-problema--cargoservice) e [_cargorobot_](#analisi-del-problema--cargorobot). Nel far questo si sono anche definite le interfaccie per i componenti _hold_ e _sonar_ da svilupparsi nei prossimi sprint.
 
-
-Alla fine dello SPRINT, l’ARCHITETTURA INIZIALE DI RIFERIMENTO avrà subito una evoluzione che produce una nuova nuova ARCHITETTURA DI RIFERIMENTO, che sarà la base di partenza per lo sprint successivo.
+L'architettura del sistema risultante da questo sprint è la seguente.
 
 ![arch1](./arch1.png)

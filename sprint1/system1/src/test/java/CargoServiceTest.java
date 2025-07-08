@@ -109,4 +109,23 @@ public class CargoServiceTest {
                  response.contains("load_refused") && 
                  response.contains("overweight"));
     }
+    
+    // Scenario di test 5: richiestata rifiutata perchè prodotto non esiste
+    @Test
+    public void testLoadRequestDeniedByInexistentProduct() throws Exception {
+        // Costruisci la richiesta con PID non registrato.
+        String requestStr = CommUtils.buildRequest("tester",
+                "load_product", "load_product(987)",
+                "cargoservice").toString();
+        System.out.println("Richiesta: " + requestStr);
+        // Risposta negativa perchè il PID non è registrato 
+        String response = conn.request(requestStr);
+        System.out.println("Risposta: " + response);
+        
+        // 5. Verifica che sia stata rifiutata per la non registrazione 
+		// del prodotto  
+        assertTrue("TEST: richiesta rifiutata", 
+                 response.contains("load_refused") && 
+                 response.contains("non registrato"));
+    }
 }
