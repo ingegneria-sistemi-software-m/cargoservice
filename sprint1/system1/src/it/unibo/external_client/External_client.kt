@@ -38,6 +38,71 @@ class External_client ( name: String, scope: CoroutineScope, isconfined: Boolean
 					//After Lenzi Aug2002
 					sysaction { //it:State
 					}	 	 
+					 transition( edgeName="goto",targetState="work0", cond=doswitch() )
+				}	 
+				state("work0") { //this:State
+					action { //it:State
+						CommUtils.outcyan("$name | sends requests")
+						request("load_product", "load_product(17)" ,"cargoservice" )  
+						request("load_product", "load_product(17)" ,"cargoservice" )  
+						request("load_product", "load_product(17)" ,"cargoservice" )  
+						request("load_product", "load_product(17)" ,"cargoservice" )  
+						delay(2000) 
+						//genTimer( actor, state )
+					}
+					//After Lenzi Aug2002
+					sysaction { //it:State
+					}	 	 
+				}	 
+				state("work1") { //this:State
+					action { //it:State
+						CommUtils.outcyan("$name | sends request")
+						request("load_product", "load_product(17)" ,"cargoservice" )  
+						delay(2000) 
+						//genTimer( actor, state )
+					}
+					//After Lenzi Aug2002
+					sysaction { //it:State
+					}	 	 
+					 transition(edgeName="t053",targetState="work2",cond=whenReply("load_accepted"))
+					transition(edgeName="t054",targetState="work2",cond=whenReply("load_refused"))
+				}	 
+				state("work2") { //this:State
+					action { //it:State
+						CommUtils.outcyan("$name | sends request")
+						request("load_product", "load_product(10)" ,"cargoservice" )  
+						delay(2000) 
+						//genTimer( actor, state )
+					}
+					//After Lenzi Aug2002
+					sysaction { //it:State
+					}	 	 
+					 transition(edgeName="t055",targetState="work3",cond=whenReply("load_accepted"))
+					transition(edgeName="t056",targetState="work3",cond=whenReply("load_refused"))
+				}	 
+				state("work3") { //this:State
+					action { //it:State
+						CommUtils.outcyan("$name | sends request")
+						request("load_product", "load_product(17)" ,"cargoservice" )  
+						delay(2000) 
+						//genTimer( actor, state )
+					}
+					//After Lenzi Aug2002
+					sysaction { //it:State
+					}	 	 
+					 transition(edgeName="t057",targetState="work4",cond=whenReply("load_accepted"))
+					transition(edgeName="t058",targetState="work4",cond=whenReply("load_refused"))
+				}	 
+				state("work4") { //this:State
+					action { //it:State
+						CommUtils.outcyan("$name | sends request")
+						request("load_product", "load_product(17)" ,"cargoservice" )  
+						delay(2000) 
+						//genTimer( actor, state )
+					}
+					//After Lenzi Aug2002
+					sysaction { //it:State
+					}	 	 
 				}	 
 			}
 		}

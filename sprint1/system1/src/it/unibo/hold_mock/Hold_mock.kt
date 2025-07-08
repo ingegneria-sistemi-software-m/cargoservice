@@ -49,7 +49,7 @@ class Hold_mock ( name: String, scope: CoroutineScope, isconfined: Boolean=false
 					//After Lenzi Aug2002
 					sysaction { //it:State
 					}	 	 
-					 transition(edgeName="t043",targetState="handle_request",cond=whenRequest("reserve_slot"))
+					 transition(edgeName="t052",targetState="handle_request",cond=whenRequest("reserve_slot"))
 				}	 
 				state("handle_request") { //this:State
 					action { //it:State

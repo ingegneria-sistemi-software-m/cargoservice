@@ -456,10 +456,7 @@ import "main.java.*"
   		whenInterruptEvent container_arrived -> container_arrived_handler
 		whenInterruptEvent container_absent  -> container_absent_handler
 		whenReply moverobotdone 			 -> at_home 
-		// TODO: questa transizione causa bug, il motivo sembra essere la presenza di un messaggio spurio
-		// 'moverobotdone' che fa partire subito la transizione 'go_to_io_port -> arrived_at_io_port'
-		// ... non capisco però cosa causi questo messaggio spurio
-//  		whenRequest handle_load_operation    -> stop_going_to_home // servo subito eventuali richieste in coda 
+  		whenRequest handle_load_operation    -> stop_going_to_home // servo subito eventuali richieste in coda 
   		
 
   	State stop_going_to_home {
@@ -467,9 +464,9 @@ import "main.java.*"
    		emit alarm : alarm(blocca) // blocco il basicrobot
    		[# moving = false #]
    		
-   		// aggiorno il mio slot prenotato (non viene fatto in 'go_to_io_port' dato che consumo
-   		// la richiesta 'handle_load_operation' prima di arrivarci, e quindi il relativo blocco 
-   		// onMsg{} di 'go_to_io_port' non viene eseguito)
+   		// aggiorno il mio slot prenotato. Devo farlo per forza qua! 
+   		// Questo perchè è questo lo stato in cui ho accesso alla richiesta
+   		// 'handle_load_operation(SLOT)'
    		onMsg( handle_load_operation : handle_load_operation(SLOT) ) { 
 			[# 
 				Reserved_slot = payloadArg(0)
@@ -482,20 +479,45 @@ import "main.java.*"
 			#]
 			// DEBUG: 
 			println("$name | cargorobot reserved_slot is $Reserved_slot = ($X, $Y)") color magenta
-		}
-   		
-   		// anche se estremamente improbabile, anche durante questo mini-stato 
-   		// potrebbe essere arrivata una interruzione.
-		// Mi mando un messaggio per ricordarmi che posso procedere
-		autodispatch continue : continue(si)
+		}		
    	}
    	Transition t0
 	   	whenInterruptEvent interrompi_tutto  -> wait_resume_msg
 		whenInterruptEvent container_arrived -> container_arrived_handler
 		whenInterruptEvent container_absent  -> container_absent_handler
-		whenMsg continue					 -> go_to_io_port
-  		
+		// causato da alarm quando viene emesso mentre si sta facendo l'ultimo passo del piano
+		// e si riesce quindi a completare quest'ultimo
+		whenReply moverobotdone 			 -> stopped_for_next_request  
+		// causato da alarm quando si interrompe un piano a metà
+   		whenReply moverobotfailed 			 -> stopped_for_next_request  
+		
   	
+  	// NB: ho bisogno di questo stato per consumare le risposte 'moverobotdone' e 
+  	// 'moverobotfailed' prodotto dall'emissione di alarm mentre il robot è in movimento.
+  	// Se non le consumassi queste risposte rimarrebbero nella coda di cargorobot 
+  	// e provocorebbero delle transizioni non previste
+  	State stopped_for_next_request{
+		// vado verso la io-port
+		println("$name | going to io-port") color magenta
+		[#
+			// aggiorno la mia destinazione per ricordarmi dove devo andare in caso di interruzioni
+			Destination = "io_port"
+			
+			val coords = config.getPositions()[Destination]!!
+			val X = coords[0]
+			val Y = coords[1]
+		#]
+		
+    	request basicrobot -m  moverobot : moverobot($X, $Y)
+    	
+		[# moving = true #]
+   	}
+   	Transition t0
+   		whenInterruptEvent interrompi_tutto  -> wait_resume_msg
+		whenInterruptEvent container_arrived -> container_arrived_handler
+		whenInterruptEvent container_absent  -> container_absent_handler
+		whenReply moverobotdone 			 -> arrived_at_io_port  
+
 
   	State at_home{
    		println("$name | at home") color magenta
@@ -528,7 +550,27 @@ import "main.java.*"
    		emit alarm : alarm(blocca) // blocco il basicrobot
 	}
 	Transition t0
+		// ho bisogno anche di questa transizione in quanto non è detto che il robot venga 
+		// interrotto mentre è in movimento. Se cargorobot viene bloccato, ad esempio, mentre
+		// è in attesa all'io-port l'emissione di alarm non farà mai arrivare le reply sotto
 		whenEvent riprendi_tutto -> resume
+		// causato da alarm quando viene emesso mentre si sta facendo l'ultimo passo del piano
+		// e si riesce quindi a completare quest'ultimo
+		whenReply moverobotdone   -> stopped_for_sonar_fault  
+		// causato da alarm quando si interrompe un piano a metà
+   		whenReply moverobotfailed -> stopped_for_sonar_fault  
+		
+  	
+  	// NB: ho bisogno di questo stato per consumare le risposte 'moverobotdone' e 
+  	// 'moverobotfailed' prodotto dall'emissione di alarm mentre il roboto è in movimento.
+  	// Se non le consumassi queste risposte rimarrebbero nella coda di cargorobot 
+  	// e provocorebbero delle transizioni non previste
+  	State stopped_for_sonar_fault{
+  		// devo solo aspettare
+   	}
+   	Transition t0
+   		whenEvent riprendi_tutto -> resume
+   		
 	
 	
 	State resume {
@@ -664,11 +706,11 @@ QActor sonar_mock context ctx_cargoservice{
  
   		// mi guasto ogni tanto
   		if [# counter%1 == 0 #] {
-//	    	println("$name | ALLARME") color red 	// DEBUG
+	    	println("$name | ALLARME") color red 	// DEBUG
 	 		emit interrompi_tutto : interrompi_tutto(si) 
 	 		
 	 		delay 3000
-//	 		println("$name | A POSTO") color green 	// DEBUG
+	 		println("$name | A POSTO") color green 	// DEBUG
 	 		emit riprendi_tutto : riprendi_tutto(si) 
   		}
   	}
@@ -697,44 +739,55 @@ QActor external_client context ctx_cargoservice{
  	State s0 initial {
  		println("$name | STARTS") color cyan
   	} 
-//  	Goto work1 // commenta quando vuoi mandare richieste con i test
+  	// commenta entrambi quando vuoi mandare richieste con i test
+  	Goto work0
+//  	Goto work1 
   	
-  	// client mock che manda 4 richieste
-//  	
-//  	State work1 {
-//  		println("sono io il colpevole!!!") color red
-// 		println("$name | sends request") color cyan
-// 		request cargoservice -m load_product: load_product(17)
-// 		delay 2000
-//  	} 
-//  	Transition t0
-//	   whenReply load_accepted -> work2
-//	   whenReply load_refused  -> work2
-//	   
-//	   
-//	State work2 {
-// 		println("$name | sends request") color cyan
-// 		request cargoservice -m load_product: load_product(10)
-// 		delay 2000
-//  	} 
-//  	Transition t0
-//	   whenReply load_accepted -> work3
-//	   whenReply load_refused  -> work3
-//	   
-//	
-//	State work3 {
-// 		println("$name | sends request") color cyan
-// 		request cargoservice -m load_product: load_product(17)
-// 		delay 2000
-//  	} 
-//  	Transition t0
-//	   whenReply load_accepted -> work4
-//	   whenReply load_refused  -> work4
-//	   
-//	
-//	State work4 {
-// 		println("$name | sends request") color cyan
-// 		request cargoservice -m load_product: load_product(17)
-// 		delay 2000
-//  	} 
+  	
+  	// cliente che mi manda 4 richieste una dietro l'altra
+  	State work0 {
+ 		println("$name | sends requests") color cyan
+ 		request cargoservice -m load_product: load_product(17)
+ 		request cargoservice -m load_product: load_product(17)
+ 		request cargoservice -m load_product: load_product(17)
+ 		request cargoservice -m load_product: load_product(17)
+ 		delay 2000
+  	} 
+  	
+  	// client mock che manda 4 richieste spaziate
+  	State work1 {
+ 		println("$name | sends request") color cyan
+ 		request cargoservice -m load_product: load_product(17)
+ 		delay 2000
+  	} 
+  	Transition t0
+	   whenReply load_accepted -> work2
+	   whenReply load_refused  -> work2
+	   
+	   
+	State work2 {
+ 		println("$name | sends request") color cyan
+ 		request cargoservice -m load_product: load_product(10)
+ 		delay 2000
+  	} 
+  	Transition t0
+	   whenReply load_accepted -> work3
+	   whenReply load_refused  -> work3
+	   
+	
+	State work3 {
+ 		println("$name | sends request") color cyan
+ 		request cargoservice -m load_product: load_product(17)
+ 		delay 2000
+  	} 
+  	Transition t0
+	   whenReply load_accepted -> work4
+	   whenReply load_refused  -> work4
+	   
+	
+	State work4 {
+ 		println("$name | sends request") color cyan
+ 		request cargoservice -m load_product: load_product(17)
+ 		delay 2000
+  	} 
 }

@@ -42,6 +42,7 @@ with Diagram('arch1Arch', show=False, outformat='png', graph_attr=graphattr) as 
      sonar_mock >> Edge( label='interrompi_tutto', **eventedgeattr, decorate='true', fontcolor='red') >> sys
      sonar_mock >> Edge( label='riprendi_tutto', **eventedgeattr, decorate='true', fontcolor='red') >> sys
      cargorobot >> Edge(color='magenta', style='solid', decorate='true', label='<engage<font color="darkgreen"> engagedone engagerefused</font> &nbsp; moverobot<font color="darkgreen"> moverobotdone moverobotfailed</font> &nbsp; >',  fontcolor='magenta') >> basicrobot
+     external_client >> Edge(color='magenta', style='solid', decorate='true', label='<load_product<font color="darkgreen"> load_accepted load_refused</font> &nbsp; >',  fontcolor='magenta') >> cargoservice
      cargoservice >> Edge(color='magenta', style='solid', decorate='true', label='<getProduct<font color="darkgreen"> getProductAnswer</font> &nbsp; >',  fontcolor='magenta') >> productservice
      cargoservice >> Edge(color='magenta', style='solid', decorate='true', label='<reserve_slot<font color="darkgreen"> reserve_slot_success reserve_slot_fail</font> &nbsp; >',  fontcolor='magenta') >> hold_mock
      cargoservice >> Edge(color='magenta', style='solid', decorate='true', label='<handle_load_operation<font color="darkgreen"> load_operation_complete</font> &nbsp; >',  fontcolor='magenta') >> cargorobot
