@@ -25,6 +25,20 @@ Terzo e ultimo obiettivo dello sprint 0 sarà quello di definire un **piano di l
 
 Inoltre, in questa sezione si deciderà come suddividere il lavoro tra i membri del gruppo, ed eventualmente, quali sprint potranno essere realizzati in parallelo.
 
+## Premessa | metamodello QAK
+
+L'analisi dei requisiti riportata in questo sprint iniziale verrà eseguita basandosi sul concetto di [attore](https://github.com/anatali/issLab2025/tree/main/iss25Material/docs/_build/html/QakActors25Intro.html#qakactors25intro) e sfruttando il [metamodello QAK](https://github.com/anatali/issLab2025/tree/main/iss25Material/docs/_build/html/QakActors25Intro.html#qak-software-factory) e la relativa **software factory**.
+
+L'utilizzo del concetto di attore durante l'analisi dei requisiti permette di modellare le entità del sistema che hanno **un proprio flusso di controllo** (attive) e che **interagiscono con altre entità mediante scambio di messaggi**. Questa tipologia di entità è molto presente nel dominio e nei requisiti del sistema presentato dal commmittente; per questo motivo è stato ritenuto opportuno la modellazione tramite attori. Se si fossero utilizzati dei semplici POJO (vedi metamodello UML) l'abstraction gap tra le entità da modellare e gli strumenti di modellazione sarebbe stato troppo alto.
+
+La particolare tipologia di attori utilizzata è quella del **metamodello QAK**. Quest'ultimo fornisce un insieme di concetti fondamentale per la modellazione di sistemi distribuiti a microservizi come quello richiesto dal committente. Tra questi concetti, quelli di particolare interesse sono:
+- le varie tipologie di **messaggi** scambiabili tra gli attori del sistema. Ognuno con la propria sintassi e semantica.
+- il concetto di **contesto** come nodo logico all'interno di un sistema distribuito
+
+Infine, l'adozione del metamodello QAK è anche motivata dalla presenza di una **software factory** che è in grado di generare automaticamente codice Kotlin a partire dai modelli scritti in linguaggio QAK. Questo permette di ottenere dei **modelli eseguibili**, riducendo notevolmente la fasi di progettazione e implementazione negli sprint successivi.  
+
+Per i motivi sopra elencati, il metamodello QAK continuerà ad essere usato anche negli sprint.
+
 ## Requisiti
 
 I requisiti sono descritti dal committente nel documento: [documento dei requisiti](https://github.com/ingegneria-sistemi-software-m/cargoservice/blob/master/requirements/README.md). 
