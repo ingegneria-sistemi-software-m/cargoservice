@@ -56,7 +56,12 @@ Il tipico ciclo di attività di _sonar_ è la seguente:
 4.  solo nel caso in cui la misurazione corrente _m_ abbia portato al passo precedente alla rilevazione di un guasto nel sonar fisico, **_sonar_ cambia di stato** e attende la prima misurazione _m' < DFREE_ prima di tornare ad uno stato di corretto funzionamento. All'arrivo della misurazione _m'_, _sonar_ fa ripartire il resto del sistema **emettendo l'evento 'riprendi_tutto'** introdotto nello sprint 1.
 
 
-    
+
+### Considerazioni
+L'attore che effettua le misurazioni dal sonar fisico e l'attore che le processa possono essere due attori separati. Questa è una buona idea perchè ... 
+
+
+
 ### Problematiche
 L'analisi fatta fino ad ora evidenzia fa sorgere delle domande.
 
@@ -118,3 +123,8 @@ Se una misurazione non è consistente, o se le misurazioni sono state consistent
 
 
 ### Modello Sonar
+
+
+
+## Progettazione
+forse ha senso spezzare il sonar in due attori in maniera da poter usare dei sonar simulator?
