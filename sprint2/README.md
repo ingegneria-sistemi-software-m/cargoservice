@@ -39,7 +39,7 @@ I [requisiti](https://github.com/ingegneria-sistemi-software-m/cargoservice/tree
 ## Analisi del problema | Sonar
 L'attore _sonar_ è responsabile di effettuare **periodicamente** delle misurazioni di distanze allo scopo di rilevare la presenza dei container che arrivano all'_IO-port_.  
 
-Il tipico ciclo di attività di _sonar_ è la seguente:
+Il tipico ciclo di attività di _sonar_ è il seguente:
 1. _sonar_ effettua una misurazione _m_ comandando il sensore fisico.
 
 2. _sonar_ controlla in quale intervallo ricade _m_, le possibilità sono tre:
@@ -58,15 +58,19 @@ Il tipico ciclo di attività di _sonar_ è la seguente:
 
 
 ### Considerazioni
-L'attore che effettua le misurazioni dal sonar fisico e l'attore che le processa possono essere due attori separati. Questa è una buona idea perchè ... 
+Il ciclo di attività dell'attore _sonar_ è divisibile in due fasi:
+- fase di recupero della misurazione
+- fase di processamento della misurazione
+
+Risulta quindi possibile separare _sonar_ in **due attori distinti**, uno per fase. Questo porta ad avere come vantaggio il poter **produrre misurazioni fittizzie** sostituendo l'attore che recupera le misurazioni dal sonar fisico con un attore mock, oppure con una test unit, rendendo facilmente testabile la logica di processamento. 
 
 
 
 ### Problematiche
-L'analisi fatta fino ad ora evidenzia fa sorgere delle domande.
+L'analisi fatta fino ad ora fa sorgere le seguenti domande.
 
 #### Come fa _sonar_ a comandare il sonar fisico per ottenere le misurazioni?
-Il caro committente ha fornito uno script python che fa proprio questo. Più nel dettaglio, lo script fornito comanda i **pin GPIO** di un **Raspberry PI** a cui il sonar fisico è collegato, ottenendo in questo modo **una misurazione al secondo**.
+Il caro committente ha fornito uno script python che fa proprio questo. Più nel dettaglio, lo script fornito comanda i **pin GPIO** di un **Raspberry PI** a cui il sonar fisico è collegato, ottenendo **una misurazione al secondo**.
 
 ```python
 # File: sonar.py
@@ -121,10 +125,346 @@ Siccome le misurazioni vengono effettuate una volta al secondo, se il contatore 
 Se una misurazione non è consistente, o se le misurazioni sono state consistenti per 3 secondi, il contatore viene resettato.
 
 
+### Messaggi
+_sonar_ emette tutti gli eventi definiti durante l'analisi di _cargorobot_ fatta nello sprint 1
+
+```
+Event container_arrived : container_arrived(X) 
+Event container_absent  : container_absent(X)  
+Event interrompi_tutto  : interrompi_tutto(X)  
+Event riprendi_tutto    : riprendi_tutto(X)   
+```
+
+Oltre a questi, siccome si è deciso di separare _sonar_ in due attori distinti, si introduce un evento corrispondente ad una misurazione del sonar fisico. 
+
+```
+Event measurement 		: measurement(CM)
+```
+
 
 ### Modello Sonar
+L'analisi fatta fino ha portato al seguente modello.
+
+```Java
+QActor sonardevice context ctx_iodevices {
+	[# 
+		lateinit var reader : java.io.BufferedReader
+	    lateinit var p : Process	
+	    var Distance = 0
+	#]	
+	
+	State s0 initial{
+		println("$name | start") 
+	 	[#
+			p       = Runtime.getRuntime().exec("python sonar.py")
+			reader  = java.io.BufferedReader( 
+                        java.io.InputStreamReader(p.getInputStream())
+                      )	
+		#]		
+	}
+	Goto readSonarData
+	
+	State readSonarData{
+		[# 
+			var data = reader.readLine()
+			
+			if( data != null ){
+				try{ 
+					val vd = data.toFloat()
+					val v  = vd.toInt()
+					
+					// filter the data maybe?
+					if(v <= 100)
+						Distance = v				
+					else 
+						Distance = 0
+				}catch(e: Exception){
+					CommUtils.outred("$name readSonarDataERROR: $e")
+				}
+			}
+			
+		#]	
+		
+		if [# Distance > 0 #] { 
+		    println("$name | misurato $data cm") color yellow
+			emitlocalstream measurement : measurement($Distance)			 
+		}
+	}
+	Goto readSonarData
+}
+
+
+
+
+QActor measure_processor context ctx_iodevices {
+	import "main.java.IntervalliMisurazioni"
+
+	[# 
+		val DFREE = 30 
+        // uso degli enumerativi
+		var CurrentIntervallo = IntervalliMisurazioni.PRIMA_MISURAZIONE
+		var LastIntervallo = IntervalliMisurazioni.PRIMA_MISURAZIONE
+		// conta quanti misurazioni di fila sono cadute nello stesso intervallo
+		var CounterIntervallo = 1
+		// flag che mi dice se sono in uno stato di malfunzionamento
+		var Guasto = false
+	#]	
+	
+	State s0 initial{
+		println("$name | start") 
+	 	subscribeTo sonardevice for measurement
+	}
+	Goto listen_for_measurement
+
+	
+	State listen_for_measurement {
+		//aspetto
+	}
+	Transition t0
+		whenEvent measurement -> process_measurement
+		
+		
+	State process_measurement {
+		onMsg(measurement : measurement(X)) {
+			[# 
+				val M = payloadArg(0).toInt()	
+				CounterIntervallo++
+			#]
+			
+			if [#  M < DFREE/2 #] { 
+//				println("$name | container presente") color blue // DEBUG
+				[# 
+                    CurrentIntervallo =
+                        IntervalliMisurazioni.CONTAINER_PRESENTE
+                #]
+
+				if [# Guasto #] {
+					println("$name | sonar ripristinato") color green
+					[# Guasto = false #]
+					emit riprendi_tutto : riprendi_tutto(si)
+				}
+			}
+			
+			if [# M >= DFREE/2 && M <= DFREE #] { 
+//				println("$name | container assente") color blue // DEBUG
+				[# 
+                    CurrentIntervallo =
+                        IntervalliMisurazioni.CONTAINER_ASSENTE
+                #]
+
+				if [# Guasto #] {
+					println("$name | sonar ripristinato") color green
+					[# Guasto = false #]
+					emit riprendi_tutto : riprendi_tutto(si)
+				}
+			}
+			
+			if [# M > DFREE #] { 
+//				println("$name | guasto!!!") color blue // DEBUG
+				[# CurrentIntervallo = IntervalliMisurazioni.GUASTO #]
+			} 
+			
+			[#
+				if(CurrentIntervallo==LastIntervallo &&
+                   LastIntervallo!=IntervalliMisurazioni.PRIMA_MISURAZIONE)
+                {
+					// switch di Kotlin
+					when(CurrentIntervallo) {
+					    IntervalliMisurazioni.CONTAINER_PRESENTE -> {
+					        if(CounterIntervallo == 3) {
+					        	CommUtils.outmagenta("Container presente
+                                                      consistentemente")
+        	#]
+								emit container_arrived :
+                                     container_arrived(si)
+			[#
+					    		CounterIntervallo = 0
+					    	}
+					    }
+					    IntervalliMisurazioni.CONTAINER_ASSENTE -> {
+					    	if(CounterIntervallo == 3) {
+					        	CommUtils.outmagenta("Container assente
+                                                      consistentemente")
+        	#]
+								emit container_absent : 
+                                     container_absent(si)
+			[#
+					    		CounterIntervallo = 0
+					    	}
+					    }
+					    IntervalliMisurazioni.GUASTO -> {
+					    	if(CounterIntervallo == 3) {
+								CommUtils.outred("Guasto consistente")	
+								Guasto = true
+			#]
+								emit interrompi_tutto : 
+                                     interrompi_tutto(si)
+			[#
+								CounterIntervallo = 0			    		
+					    	}
+					    }
+					    else -> {
+					    	// ci vuole se no kotlin si lamenta in quanto
+					    	// i casi sopra non sono esausitivi
+					    }
+					}
+				} 
+				else {
+					// 1 in quanto questa è la prima misurazione 
+                    // appartenente al suo intervallo
+					CounterIntervallo = 1
+				}
+				
+				LastIntervallo = CurrentIntervallo
+			#]
+		}
+	}
+	Goto listen_for_measurement
+}
+```
+
+
+
+## Piano di test
+
+### Sonar
+
+#### Scenario 1: container presente per 3 secondi
+
+#### Scenario 2: container presente per 3 secondi e poi assente per 3 secondi
+
+#### Scenario 3: rilevazione guasto e ripristino
+
+Successivamente, si è testato il sonar anche utilizzando i seguenti attori mock.
+
+#### sonar_simul
+```Java
+QActor sonar_simul  context ctx_iodevices{
+	State s0 initial{
+	}
+	Goto work
+
+	State work{
+		delay 1000 // attendo l'avvio di sonar_listener
+		
+		// misurazioni non consistenti
+		emitlocalstream measurement      : measurement(30)
+	    delay 1000
+		emitlocalstream measurement      : measurement(15)
+	    delay 1000
+		emitlocalstream measurement      : measurement(10)
+	    delay 1000
+		emitlocalstream measurement      : measurement(0)
+	    delay 1000
+		emitlocalstream measurement      : measurement(40)
+		
+		// assente per 4 secondi
+		emitlocalstream measurement      : measurement(20)
+	    delay 1000
+	    emitlocalstream measurement      : measurement(20)
+	    delay 1000
+	    emitlocalstream measurement      : measurement(20)
+	    delay 1000
+	    emitlocalstream measurement      : measurement(20)
+	    delay 1000
+	    
+		// presente per 3 secondi
+		emitlocalstream measurement      : measurement(10)
+	    delay 1000
+	    emitlocalstream measurement      : measurement(10)
+	    delay 1000
+	    emitlocalstream measurement      : measurement(10)
+	    delay 1000
+	    
+	    // di nuovo presente per 3 secondi
+	    emitlocalstream measurement      : measurement(10)
+	    delay 1000
+	    emitlocalstream measurement      : measurement(10)
+	    delay 1000
+	    emitlocalstream measurement      : measurement(10)
+	    delay 1000
+	    
+	    // guasto per 5 secondi
+	    emitlocalstream measurement      : measurement(31)
+	    delay 1000
+	    emitlocalstream measurement      : measurement(31)
+	    delay 1000
+	    emitlocalstream measurement      : measurement(31)
+	    delay 1000
+	    emitlocalstream measurement      : measurement(31)
+	    delay 1000
+	    emitlocalstream measurement      : measurement(31)
+	    delay 1000
+	    
+	    // di nuovo presente per 2 secondi, assente per 3
+	    emitlocalstream measurement      : measurement(10)
+	    delay 1000
+	    emitlocalstream measurement      : measurement(10)
+	    delay 1000
+	    emitlocalstream measurement      : measurement(20)
+	    delay 1000
+	    emitlocalstream measurement      : measurement(20)
+	    delay 1000
+	    emitlocalstream measurement      : measurement(20)
+	    delay 1000
+	}
+}
+```
+
+#### sonar_listener
+```Java
+QActor sonar_listener context ctx_iodevices {
+	State s0 initial{
+		println("$name | start") 
+	}
+	Goto work
+	
+	
+	State work {
+		println("$name | working") color blue
+		delay 1000
+	}
+	Transition t0
+		whenEvent container_arrived -> container_arrived
+		whenEvent container_absent -> container_absent
+		whenEvent interrompi_tutto -> bloccato
+		
+		
+	State container_arrived {
+		println("$name | container_arrived") color green
+		delay 1000
+	} 
+	Goto work
+	
+	
+	State container_absent {
+		println("$name | container_absent") color red
+		delay 1000
+	} 
+	Goto work
+	
+		
+	State bloccato {
+		println("$name | bloccato!") color red
+	}
+	Transition t0
+		whenEvent riprendi_tutto -> ripristinato
+		
+		
+	State ripristinato {
+		println("$name | ripristinato!") color green
+	}
+	Goto work
+}
+```
+
+
+### Hold
 
 
 
 ## Progettazione
-forse ha senso spezzare il sonar in due attori in maniera da poter usare dei sonar simulator?
+
+
+### sonar
+non ha bisogno di progettazione

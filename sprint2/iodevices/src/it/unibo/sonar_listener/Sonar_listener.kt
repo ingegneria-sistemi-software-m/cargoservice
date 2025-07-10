@@ -49,10 +49,9 @@ class Sonar_listener ( name: String, scope: CoroutineScope, isconfined: Boolean=
 					//After Lenzi Aug2002
 					sysaction { //it:State
 					}	 	 
-					 transition(edgeName="t03",targetState="container_arrived",cond=whenEvent("container_arrived"))
-					transition(edgeName="t04",targetState="container_absent",cond=whenEvent("container_absent"))
-					transition(edgeName="t05",targetState="bloccato",cond=whenEvent("interrompi_tutto"))
-					transition(edgeName="t06",targetState="work",cond=whenDispatch("continue"))
+					 transition(edgeName="t01",targetState="container_arrived",cond=whenEvent("container_arrived"))
+					transition(edgeName="t02",targetState="container_absent",cond=whenEvent("container_absent"))
+					transition(edgeName="t03",targetState="bloccato",cond=whenEvent("interrompi_tutto"))
 				}	 
 				state("container_arrived") { //this:State
 					action { //it:State
@@ -84,7 +83,7 @@ class Sonar_listener ( name: String, scope: CoroutineScope, isconfined: Boolean=
 					//After Lenzi Aug2002
 					sysaction { //it:State
 					}	 	 
-					 transition(edgeName="t07",targetState="ripristinato",cond=whenEvent("riprendi_tutto"))
+					 transition(edgeName="t04",targetState="ripristinato",cond=whenEvent("riprendi_tutto"))
 				}	 
 				state("ripristinato") { //this:State
 					action { //it:State

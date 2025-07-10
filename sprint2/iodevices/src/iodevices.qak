@@ -6,12 +6,9 @@ Event container_absent  : container_absent(X)  "evento che avvisa dell'assenza d
 Event interrompi_tutto  : interrompi_tutto(X)  "evento che avvisa di un malfunzionamento del sonar e che quindi costringe a interrompre tutte le attività"
 Event riprendi_tutto    : riprendi_tutto(X)    "evento che avvisa del ripristino del sonar e che quindi permette di continuare tutte le attività"
 
-/* Messaggi che uso per autodispatch */
-Dispatch continue : continue(X) 
-
 
 Context ctx_iodevices 				ip [host="localhost" port=8001]
-Context ctx_cargoservice 			ip [host="192.168.1.189" port=8000] // contesto remoto
+//Context ctx_cargoservice 			ip [host="192.168.1.189" port=8000] // contesto remoto
 
 
 
@@ -90,50 +87,50 @@ Context ctx_cargoservice 			ip [host="192.168.1.189" port=8000] // contesto remo
 
 
 
-QActor sonardevice context ctx_iodevices {
-	[# 
-		lateinit var reader : java.io.BufferedReader
-	    lateinit var p : Process	
-	    var Distance = 0
-	#]	
-	
-	State s0 initial{
-		println("$name | start") 
-	 	[#
-			p       = Runtime.getRuntime().exec("python sonar.py")
-			reader  = java.io.BufferedReader( java.io.InputStreamReader(p.getInputStream()) )	
-		#]		
-	}
-	Goto readSonarData
-	
-	State readSonarData{
-		[# 
-			var data = reader.readLine()
-			
-			if( data != null ){
-				try{ 
-					val vd = data.toFloat()
-					val v  = vd.toInt()
-					
-					// filter the data maybe?
-					if(v <= 100)
-						Distance = v				
-					else 
-						Distance = 0
-				}catch(e: Exception){
-					CommUtils.outred("$name readSonarDataERROR: $e")
-				}
-			}
-			
-		#]	
-		
-		if [# Distance > 0 #] { 
-		    println("$name | misurato $data cm") color yellow
-			emitlocalstream measurement : measurement($Distance)			 
-		}
-	}
-	Goto readSonarData
-}
+//QActor sonardevice context ctx_iodevices {
+//	[# 
+//		lateinit var reader : java.io.BufferedReader
+//	    lateinit var p : Process	
+//	    var Distance = 0
+//	#]	
+//	
+//	State s0 initial{
+//		println("$name | start") 
+//	 	[#
+//			p       = Runtime.getRuntime().exec("python sonar.py")
+//			reader  = java.io.BufferedReader( java.io.InputStreamReader(p.getInputStream()) )	
+//		#]		
+//	}
+//	Goto readSonarData
+//	
+//	State readSonarData{
+//		[# 
+//			var data = reader.readLine()
+//			
+//			if( data != null ){
+//				try{ 
+//					val vd = data.toFloat()
+//					val v  = vd.toInt()
+//					
+//					// filter the data maybe?
+//					if(v <= 100)
+//						Distance = v				
+//					else 
+//						Distance = 0
+//				}catch(e: Exception){
+//					CommUtils.outred("$name readSonarDataERROR: $e")
+//				}
+//			}
+//			
+//		#]	
+//		
+//		if [# Distance > 0 #] { 
+//		    println("$name | misurato $data cm") color yellow
+//			emitlocalstream measurement : measurement($Distance)			 
+//		}
+//	}
+//	Goto readSonarData
+//}
 
 
 
@@ -154,7 +151,7 @@ QActor measure_processor context ctx_iodevices {
 	State s0 initial{
 		println("$name | start") 
 	 	
-	 	subscribeTo sonardevice for measurement
+//	 	subscribeTo sonardevice for measurement
 //	 	subscribeTo sonarsimul  for measurement
 	}
 	Goto listen_for_measurement
@@ -255,25 +252,25 @@ QActor measure_processor context ctx_iodevices {
 
 
 
-QActor led context ctx_iodevices {
-	State s0 initial{
-	}
-	Goto spento
-	
-	State spento {
-		println("$name | sono spento") color red
-		[# machineExec("python ledPython25Off.py") #]
-	}
-	Transition t0
-		whenEvent interrompi_tutto -> acceso
-	
-	State acceso {
-		println("$name | sono acceso") color green
-		[# machineExec("python ledPython25On.py") #]
-	}
-	Transition t0
-		whenEvent riprendi_tutto -> spento
-}
+//QActor led context ctx_iodevices {
+//	State s0 initial{
+//	}
+//	Goto spento
+//	
+//	State spento {
+//		println("$name | sono spento") color red
+//		[# machineExec("python ledPython25Off.py") #]
+//	}
+//	Transition t0
+//		whenEvent interrompi_tutto -> acceso
+//	
+//	State acceso {
+//		println("$name | sono acceso") color green
+//		[# machineExec("python ledPython25On.py") #]
+//	}
+//	Transition t0
+//		whenEvent riprendi_tutto -> spento
+//}
 
 
 
@@ -293,7 +290,6 @@ QActor sonar_listener context ctx_iodevices {
 		whenEvent container_arrived -> container_arrived
 		whenEvent container_absent -> container_absent
 		whenEvent interrompi_tutto -> bloccato
-		whenMsg continue -> work
 		
 		
 	State container_arrived {
