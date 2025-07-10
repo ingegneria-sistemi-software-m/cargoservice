@@ -1,0 +1,751 @@
+System arch2
+
+
+/* Messaggi per l'interazione con cargoservice */
+Request load_product  : load_product(PID) 			    	 "la richiesta di carico di un container che arriva a cargoservice: contiene il PID del prodotto"
+Reply   load_accepted : load_accepted(SLOT) for load_product "può essere accettata, con restituzione dello slot assegnato al container"
+Reply   load_refused  : load_refused(CAUSA) for load_product "può essere rifiutata per vari motivi (peso, slot occupati, PID inesistente)"
+
+/* Messaggi per l'interazione con productservice (mi servono solo le get) */
+Request getProduct 		: product( ID )  
+Reply   getProductAnswer: product( JSonString ) for getProduct 
+
+/* Messaggi per l'interazione con hold*/
+Request reserve_slot         : reserve_slot(WEIGHT) 			    	   "richiesta verso hold per prenotare uno slot. Contiene il peso del prodotto da caricare"
+Reply   reserve_slot_success : reserve_slot_success(SLOT) for reserve_slot "se la richiesta è soddisfacibile, hold restituisce il nome/id dello slot prenotato"
+Reply   reserve_slot_fail    : reserve_slot_fail(CAUSA) for reserve_slot   "fallisce se il peso supera MaxLoad oppure se non c'è uno slot libero"
+
+/* Messaggi per l'interazione con cargorobot */
+Request handle_load_operation   : handle_load_operation(SLOT) 			  				"richiesta verso cargorobot per l'intervento di carico"
+Reply   load_operation_complete : load_operation_complete(OK) for handle_load_operation "l'intervento di carico non può fallire quindi prevediamo solo una risposta"
+
+/* Eventi del sonar */
+Event container_arrived : container_arrived(X) "evento che avvisa della presenza di un container presso l'IO-port"
+Event container_absent  : container_absent(X)  "evento che avvisa dell'assenza di un container presso l'IO-port"
+Event interrompi_tutto  : interrompi_tutto(X)  "evento che avvisa di un malfunzionamento del sonar e che quindi costringe a interrompre tutte le attività"
+Event riprendi_tutto    : riprendi_tutto(X)    "evento che avvisa del ripristino del sonar e che quindi permette di continuare tutte le attività"
+
+/* Messaggi che uso per autodispatch */
+Dispatch continue : continue(X) 
+  
+
+
+/* Messaggi per l'interazione con il basicrobot */
+Dispatch cmd       	: cmd(MOVE)         
+
+Dispatch end       	: end(ARG)         
+ 
+Request step       : step(TIME)	
+Reply stepdone     : stepdone(V)                 for step
+Reply stepfailed   : stepfailed(DURATION, CAUSE) for step
+
+Event  sonardata   : sonar( DISTANCE ) 	   
+Event obstacle     : obstacle(X) 
+Event info         : info(X)    
+
+Request  doplan     : doplan( PATH, STEPTIME )
+Reply doplandone    : doplandone( ARG )    for doplan
+Reply doplanfailed  : doplanfailed( ARG )  for doplan
+
+Dispatch setrobotstate: setpos(X,Y,D) //D =up|down!left|right
+
+Request engage        : engage(OWNER, STEPTIME)	
+Reply   engagedone    : engagedone(ARG)    for engage
+Reply   engagerefused : engagerefused(ARG) for engage
+
+Dispatch disengage    : disengage(ARG)
+
+Request checkowner    : checkowner(CALLER)
+Reply checkownerok    : checkownerok(ARG)      for checkowner
+Reply checkownerfailed: checkownerfailed(ARG)  for checkowner
+  
+Event alarm           : alarm(X)
+Dispatch nextmove     : nextmove(M)
+Dispatch nomoremove   : nomoremove(M)
+ 
+Dispatch setdirection : dir( D )  //D =up|down!left|right
+
+Request moverobot    :  moverobot(TARGETX, TARGETY)  
+Reply moverobotdone  :  moverobotok(ARG)                    for moverobot
+Reply moverobotfailed:  moverobotfailed(PLANDONE, PLANTODO) for moverobot
+ 
+Request getrobotstate : getrobotstate(ARG)
+Reply robotstate      : robotstate(POS,DIR)  for getrobotstate
+
+Request getenvmap     : getenvmap(X)
+Reply   envmap        : envmap(MAP)  for getenvmap
+
+
+
+
+
+
+Context ctx_cargoservice 			ip [host="localhost" port=8000]
+//Context ctx_cargoservice_clients 	ip [host="localhost" port=9000]
+Context ctx_iodevices 				ip [host="rpi" port=8001]
+Context ctx_basicrobot     ip [host="my-basicrobot"   port=8020]
+Context ctx_productservice ip [host="cargoserviceqak" port=8111]  
+
+ExternalQActor basicrobot     context ctx_basicrobot   
+ExternalQActor productservice context ctx_productservice
+
+
+
+/*********** CARGOSERVICE ***********/
+
+QActor cargoservice context ctx_cargoservice {
+	[#
+		var Cur_prod_PID = -1
+		var Cur_prod_weight = -1
+	#] 
+	
+	State s0 initial{
+		println("$name | STARTS") color blue
+		
+		[#
+			// inizializzo lo stato 
+		#]
+	} 
+	Goto wait_request
+	
+	
+	
+	/* inizio ciclo di servizio */
+	
+	State wait_request{
+		println("$name | waiting for request") color blue
+	}
+	Transition t0
+	   whenRequest load_product -> get_prod_weight
+	
+
+
+
+
+	/* Tento di recuperare il peso del prodotto richiesto */
+	
+	State get_prod_weight {
+		onMsg( load_product : load_product(PID) ) {
+			[# Cur_prod_PID = payloadArg(0).toInt() #]
+			println("$name | checking with productservice for the weight of PID: $Cur_prod_PID") color blue
+			
+			request productservice -m getProduct : product($Cur_prod_PID)
+		}
+	}
+	Transition t0
+	   whenReply getProductAnswer -> check_prod_answer
+
+
+	State check_prod_answer {
+		onMsg( getProductAnswer : product( JSonString ) ) {
+			[# 
+				val jsonStr = payloadArg(0)
+				Cur_prod_weight = main.java.Product.getJsonInt(jsonStr, "weight")
+			#]
+			
+			println("$name | the weight of PID is: $Cur_prod_PID") color blue
+		}
+	}	
+	Goto reserve_slot if [# Cur_prod_weight > 0 #] else get_weight_fail
+
+	
+	
+	State get_weight_fail {
+		[# 
+			val Causa = "Non è stato possibile recuperare il peso di PID: $Cur_prod_PID in quanto non registrato dentro a productservice."
+		#]
+		println("$name | $Causa") color red
+		
+		replyTo load_product with load_refused : load_refused($Causa)
+	}
+    Goto wait_request
+	
+	
+	
+	
+	
+	/* Tento di prenotare uno slot */
+	
+	State reserve_slot {
+		println("$name | checking with hold if a reservation with (PID: $Cur_prod_PID, KG: $Cur_prod_weight) is possible") color blue
+		
+		request hold_mock -m reserve_slot : reserve_slot($Cur_prod_weight)
+	}
+    Transition t0
+	   whenReply reserve_slot_success -> load_cargo
+	   whenReply reserve_slot_fail	  -> reserve_slot_fail
+    
+    State reserve_slot_fail {
+		onMsg( reserve_slot_fail : reserve_slot_fail(CAUSA) ) {
+			[# 
+				val Causa = payloadArg(0) 
+				val CausaMsg = "Non è stato possibile prenotare uno slot per (PID: $Cur_prod_PID, KG: $Cur_prod_weight). \n\tCausa: $Causa"
+			#]
+			println("$name | $CausaMsg") color red
+			
+			replyTo load_product with load_refused : load_refused($CausaMsg)
+		}
+	}
+    Goto wait_request
+	
+	
+	
+	
+	
+	/* Richiesta soddisfacibile */
+	
+	State load_cargo {
+		onMsg( reserve_slot_success : reserve_slot_success(SLOT) ) {
+			[# 
+				val Reserved_slot = payloadArg(0)
+			#]
+			
+			// rispondo al cliente
+			println("$name | product (PID: $Cur_prod_PID, KG: $Cur_prod_weight) is going to be placed in slot: $Reserved_slot") color green
+			replyTo load_product with load_accepted : load_accepted($Reserved_slot)
+			// attivo il cargorobot
+			println("$name | waiting for load completion") color blue
+			request cargorobot -m handle_load_operation : handle_load_operation($Reserved_slot)
+		}
+	}
+    Transition t0
+	   whenReply load_operation_complete -> load_request_done
+	 
+	State load_request_done {
+		println("$name | product (PID: $Cur_prod_PID, KG: $Cur_prod_weight) successfully loaded!") color green
+	}
+	Goto wait_request
+}
+
+
+
+
+
+
+
+
+
+
+/*********** CARGOROBOT ***********/
+
+
+
+
+
+
+
+
+QActor cargorobot context ctx_cargoservice{
+import "main.java.*"
+	[#
+		// stato
+		val config = CargoRobotConfigLoader.loadFromFile("./src/main/resources/cargorobot_conf.json");
+		
+		val Step_len = config.getStepLen()
+		
+//		val positions = hashMapOf(
+//			"home"    	to arrayOf(0, 0),
+//			"io_port" 	to arrayOf(0, 4),
+//		    "slot1"   	to arrayOf(1, 1),
+//		    "slot2" 	to arrayOf(1, 3),
+//		    "slot3" 	to arrayOf(4, 1),
+//		    "slot4" 	to arrayOf(4, 3)
+//		)
+//		
+//		val directions = hashMapOf(
+//			"home"    	to "down",
+//			"io_port" 	to "down",
+//		    "slot1"   	to "right",
+//		    "slot2" 	to "right",
+//		    "slot3" 	to "left",
+//		    "slot4" 	to "left"
+//		)
+
+		lateinit var Destination : String
+		lateinit var Reserved_slot : String
+		
+		var moving 	= false
+		
+		var container_present = false
+	#]
+    
+	State s0 initial {
+		println("$name | STARTS") color magenta
+		
+		println("$name | $MyName engaging ... ") color yellow 
+		request basicrobot -m engage : engage($MyName, $Step_len)
+	}
+	Transition t0
+		whenReply engagedone    -> wait_request  
+ 	  	whenReply engagerefused -> end
+	
+	  
+	  
+	  
+	/* inizio ciclo di servizio */
+	
+	State wait_request{
+		println("$name | waiting for request") color magenta
+		[# moving = false #]
+	}
+	Transition t0
+		whenInterruptEvent interrompi_tutto  -> wait_resume_msg
+		whenInterruptEvent container_arrived -> container_arrived_handler
+		whenInterruptEvent container_absent  -> container_absent_handler
+		whenRequest handle_load_operation    -> go_to_io_port
+	   
+	
+		
+		
+		
+	/* vado a prendere il container */
+	
+	State go_to_io_port {
+		// aggiorno il mio stato recuperando le coordinato dello slot prenotato
+		onMsg( handle_load_operation : handle_load_operation(SLOT) ) {
+			[# 
+				Reserved_slot = payloadArg(0)
+								
+				// il doppio !! serve a dire al compilatore Kotlin di stare tranquillo 
+				// e di recuperare il valore dalla mappa anche senza fare dei null-check
+				val coords = config.getPositions()[Reserved_slot]!!
+				val X = coords[0]
+				val Y = coords[1]
+			#]
+			// DEBUG: 
+			println("$name | cargorobot reserved_slot is $Reserved_slot = ($X, $Y)") color magenta
+		}
+		
+		// vado verso la io-port
+		println("$name | going to io-port") color magenta
+		[#
+			// aggiorno la mia destinazione per ricordarmi dove devo andare in caso di interruzioni
+			Destination = "io_port"
+			
+			val coords = config.getPositions()[Destination]!!
+			val X = coords[0]
+			val Y = coords[1]
+		#]
+		
+    	request basicrobot -m  moverobot : moverobot($X, $Y)
+    	
+		[# moving = true #]
+ 	}  	
+  	Transition t0 
+  		whenInterruptEvent interrompi_tutto  -> wait_resume_msg
+  		whenInterruptEvent container_arrived -> container_arrived_handler
+		whenInterruptEvent container_absent  -> container_absent_handler
+  		whenReply moverobotdone 		     -> arrived_at_io_port
+		
+
+	
+	State arrived_at_io_port {
+		println("$name | arrived at io-port") color magenta
+		[# 
+			moving = false
+			
+			val Direction = config.getDirections()[Destination]!!
+		#]
+		forward basicrobot -m setdirection : dir($Direction)
+		
+		// se il container c'è gia, mi mando un autodispatch cosi da non dover aspettare
+		if [# container_present #] {
+			[# container_present = false #]
+			autodispatch continue : continue(si)
+		}
+ 	}  	
+ 	Transition t0
+ 		whenInterruptEvent interrompi_tutto -> wait_resume_msg
+ 		whenMsg continue 					-> pick_up_container
+ 		whenEvent container_arrived 		-> pick_up_container
+
+
+	State pick_up_container {
+		println("$name | picking up container") color magenta
+		[# moving = false #] // non cambia rispetto allo stato precedente ma meglio essere espliciti
+		
+		delay 3000 // tempo arbitrario per caricare il container sul cargorobot
+		
+		// durante il carico del container potrebbe essere arrivato una interruzione,
+		// mi mando un messaggio per ricordarmi che posso procedere
+		autodispatch continue : continue(si)
+	}
+	Transition t0
+		whenInterruptEvent interrompi_tutto -> wait_resume_msg
+		whenInterruptEvent container_arrived -> container_arrived_handler
+		whenInterruptEvent container_absent  -> container_absent_handler
+		whenMsg continue 					-> go_to_reserved_slot 
+		
+
+
+
+	/* vado a depositare il container */
+	
+	State go_to_reserved_slot {
+		[#
+			// aggiorno la mia destinazione per ricordarmi dove devo andare in caso di interruzioni
+			Destination = Reserved_slot
+			
+			val coords = config.getPositions()[Destination]!!
+			val X = coords[0]
+			val Y = coords[1]
+		#]
+		
+		println("$name | going to my reserved slot: $Reserved_slot = ($X, $Y)") color magenta
+		
+    	request basicrobot -m  moverobot : moverobot($X, $Y)
+    	[# moving = true #]
+ 	}  	
+ 	Transition t0 
+ 		whenInterruptEvent interrompi_tutto  -> wait_resume_msg
+		whenInterruptEvent container_arrived -> container_arrived_handler
+		whenInterruptEvent container_absent  -> container_absent_handler
+ 		whenReply moverobotdone   			 -> arrived_at_reserved_slot
+ 		
+		
+	State arrived_at_reserved_slot {
+		println("$name | arrived at reserved slot") color magenta
+		[# 
+			moving = false
+			
+			val Direction = config.getDirections()[Destination]!!
+		#]
+		forward basicrobot -m setdirection : dir($Direction)
+		
+		// scarico il container
+		println("$name | laying down the container") color magenta
+		delay 3000 // tempo arbitrario per scaricare il container dal cargorobot
+		 
+		// duranto lo scarico potrebbe essere arrivato una interruzione,
+		// mi mando un messaggio per ricordarmi che posso procedere
+		autodispatch continue : continue(si)
+	}
+	Transition t0
+		whenInterruptEvent interrompi_tutto  -> wait_resume_msg
+		whenInterruptEvent container_arrived -> container_arrived_handler
+		whenInterruptEvent container_absent  -> container_absent_handler
+		whenMsg continue 					 -> back_to_home 
+ 	
+   	
+   	
+   	
+   	
+   	/* torno a casa */
+   	
+  	State back_to_home {
+  		// rispondo a cargoservice
+  		println("$name | load operation completed") color magenta
+		replyTo handle_load_operation with load_operation_complete : load_operation_complete(ok)
+		
+		// mi avvio verso casa
+		println("$name | Back to home") color magenta
+		[#
+			// aggiorno la mia destinazione per ricordarmi dove devo andare in caso di interruzioni
+			Destination = "home"
+			
+			val coords = config.getPositions()[Destination]!!
+			val X = coords[0]
+			val Y = coords[1]
+		#]
+
+		request basicrobot -m  moverobot : moverobot($X, $Y)
+		[# moving = true #]
+	}  	
+  	Transition t0 
+  		whenInterruptEvent interrompi_tutto  -> wait_resume_msg
+  		whenInterruptEvent container_arrived -> container_arrived_handler
+		whenInterruptEvent container_absent  -> container_absent_handler
+		whenReply moverobotdone 			 -> at_home 
+  		whenRequest handle_load_operation    -> stop_going_to_home // servo subito eventuali richieste in coda 
+  		
+
+  	State stop_going_to_home {
+   		println("$name | stop going to home and start serving new request immediately") color magenta
+   		emit alarm : alarm(blocca) // blocco il basicrobot
+   		[# moving = false #]
+   		
+   		// aggiorno il mio slot prenotato. Devo farlo per forza qua! 
+   		// Questo perchè è questo lo stato in cui ho accesso alla richiesta
+   		// 'handle_load_operation(SLOT)'
+   		onMsg( handle_load_operation : handle_load_operation(SLOT) ) { 
+			[# 
+				Reserved_slot = payloadArg(0)
+								
+				// il doppio !! serve a dire al compilatore Kotlin di stare tranquillo 
+				// e di recuperare il valore dalla mappa anche senza fare dei null-check
+				val coords = config.getPositions()[Reserved_slot]!!
+				val X = coords[0]
+				val Y = coords[1]
+			#]
+			// DEBUG: 
+			println("$name | cargorobot reserved_slot is $Reserved_slot = ($X, $Y)") color magenta
+		}		
+   	}
+   	Transition t0
+	   	whenInterruptEvent interrompi_tutto  -> wait_resume_msg
+		whenInterruptEvent container_arrived -> container_arrived_handler
+		whenInterruptEvent container_absent  -> container_absent_handler
+		// causato da alarm quando viene emesso mentre si sta facendo l'ultimo passo del piano
+		// e si riesce quindi a completare quest'ultimo
+		whenReply moverobotdone 			 -> stopped_for_next_request  
+		// causato da alarm quando si interrompe un piano a metà
+   		whenReply moverobotfailed 			 -> stopped_for_next_request  
+		
+  	
+  	// NB: ho bisogno di questo stato per consumare le risposte 'moverobotdone' e 
+  	// 'moverobotfailed' prodotto dall'emissione di alarm mentre il robot è in movimento.
+  	// Se non le consumassi queste risposte rimarrebbero nella coda di cargorobot 
+  	// e provocorebbero delle transizioni non previste
+  	State stopped_for_next_request{
+		// vado verso la io-port
+		println("$name | going to io-port") color magenta
+		[#
+			// aggiorno la mia destinazione per ricordarmi dove devo andare in caso di interruzioni
+			Destination = "io_port"
+			
+			val coords = config.getPositions()[Destination]!!
+			val X = coords[0]
+			val Y = coords[1]
+		#]
+		
+    	request basicrobot -m  moverobot : moverobot($X, $Y)
+    	
+		[# moving = true #]
+   	}
+   	Transition t0
+   		whenInterruptEvent interrompi_tutto  -> wait_resume_msg
+		whenInterruptEvent container_arrived -> container_arrived_handler
+		whenInterruptEvent container_absent  -> container_absent_handler
+		whenReply moverobotdone 			 -> arrived_at_io_port  
+
+
+  	State at_home{
+   		println("$name | at home") color magenta
+   		forward basicrobot -m setdirection : dir(down)
+   		[# 
+   			moving = false
+   			
+   			val Direction = config.getDirections()[Destination]!!
+		#]
+		forward basicrobot -m setdirection : dir($Direction)
+   		// anche se estremamente improbabile, anche durante questo mini-stato 
+   		// potrebbe essere arrivata una interruzione.
+		// Mi mando un messaggio per ricordarmi che posso procedere
+		autodispatch continue : continue(si)
+   	}
+   	Transition t0 
+	   	whenInterruptEvent interrompi_tutto  -> wait_resume_msg
+		whenInterruptEvent container_arrived -> container_arrived_handler
+		whenInterruptEvent container_absent  -> container_absent_handler
+   		whenMsg continue 					 -> wait_request
+   	
+   	
+   	
+   	
+   	/* gestisco le interruzioni */
+   	
+   	State wait_resume_msg {
+   		println("$name | sonar malfunzionante, mi fermo") color red
+   		
+   		emit alarm : alarm(blocca) // blocco il basicrobot
+	}
+	Transition t0
+		// ho bisogno anche di questa transizione in quanto non è detto che il robot venga 
+		// interrotto mentre è in movimento. Se cargorobot viene bloccato, ad esempio, mentre
+		// è in attesa all'io-port l'emissione di alarm non farà mai arrivare le reply sotto
+		whenEvent riprendi_tutto -> resume
+		// causato da alarm quando viene emesso mentre si sta facendo l'ultimo passo del piano
+		// e si riesce quindi a completare quest'ultimo
+		whenReply moverobotdone   -> stopped_for_sonar_fault  
+		// causato da alarm quando si interrompe un piano a metà
+   		whenReply moverobotfailed -> stopped_for_sonar_fault  
+		
+  	
+  	// NB: ho bisogno di questo stato per consumare le risposte 'moverobotdone' e 
+  	// 'moverobotfailed' prodotto dall'emissione di alarm mentre il roboto è in movimento.
+  	// Se non le consumassi queste risposte rimarrebbero nella coda di cargorobot 
+  	// e provocorebbero delle transizioni non previste
+  	State stopped_for_sonar_fault{
+  		// devo solo aspettare
+   	}
+   	Transition t0
+   		whenEvent riprendi_tutto -> resume
+   		
+	
+	
+	State resume {
+		println("$name | riprendo") color green
+		
+		// se il basic robot si stava muovendo, gli dico di nuovo dove deve andare
+		// altrimenti rimane fermo dove è stato interrotto
+		if [# moving #] {
+			[#
+				val coords = config.getPositions()[Destination]!!
+				val X = coords[0]
+				val Y = coords[1]
+			#]
+	    	request basicrobot -m  moverobot : moverobot($X, $Y)
+    	}
+    	
+    	returnFromInterrupt
+	}
+		
+		
+   	State container_arrived_handler {
+   		println("$name | container arrivato") color yellow
+   		
+   		[# container_present = true #]
+   		returnFromInterrupt
+   	}
+   	
+	State container_absent_handler {
+   		println("$name | container assente") color yellow
+   		
+   		[# container_present = false #]
+   		returnFromInterrupt
+   	}
+   	
+   	
+   	
+   	
+   	/* esco */
+   	
+   	State end{
+		println("$name | ENDS ") color red
+		[# System.exit(0) #]
+	}	
+} 
+ 
+
+
+
+
+ 
+ 
+ 
+
+ 
+ 
+ 
+ 
+
+ 
+	
+QActor hold_mock context ctx_cargoservice{
+	[# 
+		var Counter = 0
+	#]
+	
+	State s0 initial {
+		println("$name | STARTS")
+	} 
+	Goto wait_request
+	
+	  
+	State wait_request{
+//		println("$name | waiting for request") color yellow
+	}
+	Transition t0
+	   whenRequest reserve_slot -> handle_request
+	  
+	
+	State handle_request{
+		delay 1000
+		
+		// risposte mock
+		if [# Counter == 0 #] {
+			replyTo reserve_slot with reserve_slot_success : reserve_slot_success(slot1)
+		} 
+		
+		if [# Counter == 1 #] {
+			replyTo reserve_slot with reserve_slot_success : reserve_slot_success(slot2)
+		}
+		
+		if [# Counter == 2 #] {
+			replyTo reserve_slot with reserve_slot_success : reserve_slot_success(slot3)
+		}
+		
+		if [# Counter == 3 #] {
+			replyTo reserve_slot with reserve_slot_success : reserve_slot_success(slot4)
+		}
+		
+		[# 
+			Counter++ 
+			
+			if(Counter == 4)
+				Counter = 0
+		#]
+	}
+	Goto wait_request
+} 
+
+
+
+
+
+
+
+
+
+
+ 
+ 
+ 
+ 
+
+QActor external_client context ctx_cargoservice{
+ 	State s0 initial {
+ 		println("$name | STARTS") color cyan
+  	} 
+  	// commenta entrambi quando vuoi mandare richieste con i test
+  	Goto work0
+//  	Goto work1 
+  	
+  	
+  	// cliente che mi manda 4 richieste una dietro l'altra
+  	State work0 {
+ 		println("$name | sends requests") color cyan
+ 		request cargoservice -m load_product: load_product(17)
+ 		request cargoservice -m load_product: load_product(17)
+ 		request cargoservice -m load_product: load_product(17)
+ 		request cargoservice -m load_product: load_product(17)
+ 		delay 2000
+  	} 
+  	
+  	// client mock che manda 4 richieste spaziate
+  	State work1 {
+ 		println("$name | sends request") color cyan
+ 		request cargoservice -m load_product: load_product(17)
+ 		delay 2000
+  	} 
+  	Transition t0
+	   whenReply load_accepted -> work2
+	   whenReply load_refused  -> work2
+	   
+	   
+	State work2 {
+ 		println("$name | sends request") color cyan
+ 		request cargoservice -m load_product: load_product(10)
+ 		delay 2000
+  	} 
+  	Transition t0
+	   whenReply load_accepted -> work3
+	   whenReply load_refused  -> work3
+	   
+	
+	State work3 {
+ 		println("$name | sends request") color cyan
+ 		request cargoservice -m load_product: load_product(17)
+ 		delay 2000
+  	} 
+  	Transition t0
+	   whenReply load_accepted -> work4
+	   whenReply load_refused  -> work4
+	   
+	
+	State work4 {
+ 		println("$name | sends request") color cyan
+ 		request cargoservice -m load_product: load_product(17)
+ 		delay 2000
+  	} 
+}

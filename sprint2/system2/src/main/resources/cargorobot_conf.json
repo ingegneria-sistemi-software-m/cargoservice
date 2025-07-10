@@ -1,0 +1,19 @@
+{
+  "Step_len": 330,
+  "positions": {
+    "home": [0, 0],
+    "io_port": [0, 4],
+    "slot1": [1, 1],
+    "slot2": [1, 3],
+    "slot3": [4, 1],
+    "slot4": [4, 3]
+  },
+  "directions": {
+    "home": "down",
+    "io_port": "down",
+    "slot1": "right",
+    "slot2": "right",
+    "slot3": "left",
+    "slot4": "left"
+  }
+}
