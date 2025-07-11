@@ -903,8 +903,7 @@ Il progetto contenente il modello QAK sviluppato in questo sprint è recuperabil
 Per avviare il progetto:
 1. eseguire ```docker compose -f arch1.yaml up``` per lanciare svariati componenti del sistema come _cargorobot_ e _productservice_
 
-2. aggiungere qualche prodotto al db mongo appena avviato sfruttando [questo caller](https://github.com/anatali/issLab2025/blob/main/cargoserviceQak/src/main/java/caller/ProductServiceDiscoverCallerTcp.java)
-	- attenzione ai PID altrimenti tutte le richieste vengono rifiutate in quanto i prodotti non vengono trovati
+2. aggiungere qualche prodotto al db mongo appena avviato, eseguendo con node lo script [setup_mongo.js](https://github.com/ingegneria-sistemi-software-m/cargoservice/tree/setup_mongo.js)
 
 3. aprire il browser e digitare ```localhost:8090``` per visualizzare l'ambiente virtuale _WEnv_
 
@@ -914,7 +913,8 @@ Per avviare il progetto:
 
 
 <h4 class="alarm">Nota:</h4>
-Si è tentato di containerizzare il contesto _ctx_cargoservice_ ma si è fallito in quanto la distribuzione creata da gradle era difettosa. Non si è capito il perchè... (magari se ne può discutere in un colloquio)
+
+Si è tentato di containerizzare il contesto *ctx_cargoservice* ma si è fallito in quanto la distribuzione creata da gradle era difettosa. Non si è capito il perchè... (magari se ne può discutere in un colloquio)
 
 
 
