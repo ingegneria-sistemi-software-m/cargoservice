@@ -903,7 +903,7 @@ Il progetto contenente il modello QAK sviluppato in questo sprint è recuperabil
 Per avviare il progetto:
 1. eseguire ```docker compose -f arch1.yaml up``` per lanciare svariati componenti del sistema come _cargorobot_ e _productservice_
 
-2. aggiungere qualche prodotto al db mongo appena avviato, eseguendo con node lo script [setup_mongo.js](https://github.com/ingegneria-sistemi-software-m/cargoservice/tree/setup_mongo.js)
+2. aggiungere qualche prodotto al db mongo appena avviato, eseguendo con node lo script [setup_mongo.js](https://github.com/ingegneria-sistemi-software-m/cargoservice/blob/master/setup_mongo.js)
 
 3. aprire il browser e digitare ```localhost:8090``` per visualizzare l'ambiente virtuale _WEnv_
 
