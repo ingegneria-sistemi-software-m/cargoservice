@@ -17,8 +17,6 @@ L'analisi dei requisiti avvenuta nello [Sprint 0](https://github.com/ingegneria-
 
 <img src="../sprint0/arch0.png" width="90%" height="90%"/>
 
-<div class="page-break"></div>
-
 ## Obiettivi
 
 L'obiettivo dello sprint 1 sarà affrontare il sottoinsieme dei requisiti relativi ai componenti cargorservice e cargorobot, effettuandone l'analisi del problema e la progettazione.  
@@ -892,7 +890,7 @@ Il progetto contenente il modello QAK sviluppato in questo sprint è recuperabil
 Per avviare il progetto:
 1. eseguire ```docker compose -f arch1.yaml up``` per lanciare svariati componenti del sistema come cargorobot e productservice
 
-2. aggiungere qualche prodotto al db mongo appena avviato, eseguendo con node lo script [setupmongo.js](https://github.com/ingegneria-sistemi-software-m/cargoservice/blob/master/setupmongo.js)
+2. aggiungere qualche prodotto al db mongo appena avviato, eseguendo con node lo script [setupmongo.js](https://github.com/ingegneria-sistemi-software-m/cargoservice/blob/master/setup_mongo.js)
 
 3. aprire il browser e digitare ```localhost:8090``` per visualizzare l'ambiente virtuale WEnv
 
