@@ -45,39 +45,40 @@ Ad esempio, hold non causerà mai il rifiuto di una richiesta di carico in quant
 
 Come detto nello sprint 0, l’attore cargoservice è il componente principale del sistema. Il suo compito è quello di fare da **orchestratore**; in altre parole, deve coordinare le operazioni degli altri componenti del sistema col fine di eseguire le operazioni specificate dai requisiti nel giusto ordine.
 
-La tipica sequenza di attività di cargoservice è la seguente:
-1. cargoservice **riceve una richiesta di carico** da parte di un cliente.
-    - la richiesta di carico contiene il PID del prodotto da caricare
+Di seguito la tipica sequenza di attività di cargoservice:
 
-2. dopo aver ricevuto la richiesta di carico, cargoservice fa una richiesta a productservice per **recuperare il peso del prodotto da caricare** associato al PID ricevuto dal cliente.
+1. Cargoservice **riceve una richiesta di carico** da parte di un cliente; ovvero la richiesta di carico contiene il PID del prodotto da caricare.
 
-3. quando cargoservice riceve la risposta alla propria query da productservice, può ricevere due tipi di risposte.
+2. Dopo aver ricevuto la richiesta di carico, cargoservice fa una richiesta a productservice per **recuperare il peso del prodotto da caricare** associato al PID ricevuto dal cliente.
+
+3. Quando cargoservice riceve la risposta alla propria query da productservice, può ricevere due tipi di risposte.
     - Errore: se il PID fornito dal cliente non sia registrato nel DB. **In questo caso, cargoservice propaga dal product service al cliente un opportuno messaggio di errore** che indica l'assenza del prodotto nel sistema.
     - Il peso del prodotto: in ogni altro caso, productservice restituisce il peso del prodotto richiesto a cargoservice che può utilizzarlo per le successive elaboraizoni.
 
-4. dopo aver recuperato il peso del prodotto da caricare, cargoservice  può passare a verificare se lo **stato del deposito permette di soddisfare la richiesta**. Si è definito nello sprint 0 che il mantenimento dello stato del deposito è responsabilità del componente hold; di conseguenza, cargoservice invierà a quest'ultimo un messaggio contenente il peso del prodotto da caricare. Si possono verificare tre casi:
-    - richiesta non soddisfacibile in quanto si eccederebbe il peso MaxLoad del deposito. Hold risponde con un opportuno messaggio di errore
-    - richiesta non soddisfacibile in quanto manca uno slot libero in cui posizionare il container. Hold risponde con un opportuno messaggio di errore
-    - richiesta soddisfacibile. Hold risponde con un messaggio contenente il nome dello slot prenotato dalla richiesta corrente
+4. Dopo aver recuperato il peso del prodotto da caricare, cargoservice può passare a verificare se lo **stato del deposito permette di soddisfare la richiesta**. Si è definito nello sprint 0 che il mantenimento dello stato del deposito è responsabilità del componente hold; di conseguenza, cargoservice invierà a quest'ultimo un messaggio contenente il peso del prodotto da caricare. Si possono verificare tre casi:
+    - richiesta non soddisfacibile in quanto si eccederebbe il peso MaxLoad del deposito; hold risponde con un opportuno messaggio di errore,
+    - richiesta non soddisfacibile in quanto manca uno slot libero in cui posizionare il container; hold risponde con un opportuno messaggio di errore,
+    - richiesta soddisfacibile; hold risponde con un messaggio contenente il nome dello slot prenotato dalla richiesta corrente.
 
-5. se la richiesta viene accettata, cargoservice può semplicemente richiedere a cargorobot di gestire il container, delegando a lui tutta la logica di attesa, trasporto e deposito del container con una operazione del tipo **handle\load\operation(slot)**. 
+5. Se la richiesta viene accettata, cargoservice può semplicemente richiedere a cargorobot di gestire il container, delegando a lui tutta la logica di attesa, trasporto e deposito del container con una operazione del tipo **handle\load\operation(slot)**. 
 
-6. cargoservice attende il completamento dell'intervento di carico da parte di cargorobot. Nel frattempo, eventuali altre richieste di carico vengono accodate.
+6. Cargoservice attende il completamento dell'intervento di carico da parte di cargorobot. Nel frattempo, eventuali altre richieste di carico vengono accodate.
 
-7. terminato l'intervento di carico, cargorobot sblocca cargoservice rispondendo alla sua precedente richiesta (evento di sincronizzazione). Da questo punto in poi cargoservice torna a poter servire le richieste di carico.
+7. Terminato l'intervento di carico, cargorobot sblocca cargoservice rispondendo alla sua precedente richiesta (evento di sincronizzazione). Da questo punto in poi cargoservice torna a poter servire le richieste di carico.
 
 #### Considerazioni
 
 Le attività che cargoservice deve effettuare non pongono particolari problemi da analizzare, si tratta solo di effettuare una serie di richieste. Tuttavia, è stata presa una decisione: quella di **rendere il cargorobot "intelligente"**.
 
-Si sarebbe potuto rendere il cargorobot un mero esecutore di comandi, aggiungendo a cargoservice la responsabilità di dettare la sua posizione e che cosa deve fare in ogni momento. Si è preferito, invece, rendere il cargorobot più intelligente e indipendente per tre motivi principali:   
-- l'analisi del dominio effettuata nello sprint 0 ha delineato il cargorobot come un componente con delle mosse più sofisticate
-- cargoservice giova di un cargorobot con delle mosse più sofisticate in quanto queste producono un abstraction gap minore 
-- principio di singola responsabilità: cargoservice si occupa di fare solo da orchestrare mentre cargorobot si occupa di effettuare le azioni del DDR descritto nei requisiti  
+Si sarebbe potuto rendere il cargorobot un mero esecutore di comandi, aggiungendo a cargoservice la responsabilità di dettare la sua posizione e che cosa deve fare in ogni momento. Si è preferito, invece, rendere il cargorobot più intelligente e indipendente per tre motivi principali.   
+1. L'analisi del dominio effettuata nello sprint 0 ha delineato il cargorobot come un componente con delle mosse più sofisticate
+1. Cargoservice giova di un cargorobot con delle mosse più sofisticate in quanto queste producono un abstraction gap minore.
+1. Principio di singola responsabilità: cargoservice si occupa di fare solo da orchestrare mentre cargorobot si occupa di effettuare le azioni del DDR descritto nei requisiti. 
 
 #### Nuovi Messaggi
 
-Nello [Sprint 0](https://github.com/ingegneria-sistemi-software-m/cargoservice/tree/master/sprint0/sprint0.pdf) si erano definiti i messaggi con cui interagire con: cargoservice, productservice e basicrobot. L'analisi della sequenza di attività del cargoservice suggerisce i seguenti nuovi messaggi.
+Nello [Sprint 0](https://github.com/ingegneria-sistemi-software-m/cargoservice/tree/master/sprint0/sprint0.pdf) si erano definiti i messaggi con cui interagire con: cargoservice, productservice e basicrobot.
+L'analisi della sequenza di attività del cargoservice suggerisce i seguenti nuovi messaggi.
 
 **Messaggi per l'interazione con hold**
 ```
@@ -221,18 +222,18 @@ QActor cargoservice context ctx_cargoservice {
 
 ### cargorobot
 
-Come detto nello sprint 0, e consolidato durante l'analisi di cargoservice, l’attore cargorobot è il componente responsabile delle attività del DDR all'interno del deposito. cargorobot implementa le sue azioni logiche comunicando con il basicrobot, che a sua volta comunica con l’ambiente virtuale WEnv. Il tutto per effettuare gli interventi di carico richiesti da cargoservice.
+Come detto nello sprint 0, e consolidato durante l'analisi di cargoservice, l’attore cargorobot è il componente responsabile delle attività del DDR all'interno del deposito.  
+IL cargorobot implementa le sue azioni logiche comunicando con il basicrobot, che a sua volta comunica con l’ambiente virtuale WEnv.  
+Il tutto per effettuare gli interventi di carico richiesti da cargoservice.
 
-Con l'analisi dei requisiti e l'analisi di cargoservice si è già delineata la sequenza di attività del cargorobot:
-1. cargorobot riceve da cargoservice una richiesta di gestione di un container contenente il nome dello slot riservato.
+Con l'analisi dei requisiti e l'analisi di cargoservice si è già delineata la sequenza di attività del cargorobot.
 
-2. cargorobot si dirige verso la pickup-position e aspetta che arrivi il container se non è già presente.
-
+1. Il cargorobot riceve da cargoservice una richiesta di gestione di un container contenente il nome dello slot riservato.
+2. il cargorobot si dirige verso la pickup-position e aspetta che arrivi il container se non è già presente.
 3. Una volta che il container è arrivato all'IO-port, cargorobot:
     - recupera il container
     - si posizione nella corretta laydown-position
     - deposita il container nello slot prenotato
-
 4. terminato l'intervento di carico, cargorobot può ritornare alla home rispondendo a cargoservice con un messaggio di successo.
 
 #### Considerazioni
@@ -703,9 +704,9 @@ L'analisi del componente _cargoservice_ ha portato a definire il seguente nuovo 
 ```
 
 
-Per quanto riguarda il cargorobot, **risulta difficile pensare a dei testi unitiari per collaudare il suo funzionamento**.
-
-Come alternativa, si è pensato semplicemente di osservare il suo comportamento in presenza degli attori mock: **external\client\mock**, **hold\mock** e **sonar\mock** che simulano gli eventi improvvisi a cui cargorobot è sensibile. 
+Per quanto riguarda il cargorobot, **risulta difficile automatizzare i testi unitiari**, ma è comunque **possibile collaudare il suo funzionamento**.  
+Idealmente, vorremmo accedere alle variabili dell WEnv ma possiamo accontentarci di visualizzare il movimento, senza automatizzare nulla.
+Come alternativa, si è quindi pensato di osservare il suo comportamento in presenza degli attori mock: **external\client\mock**, **hold\mock** e **sonar\mock** che simulano gli eventi improvvisi a cui cargorobot è sensibile. 
 
 Dopo svariate prove, e configurazioni diverse degli attori mock, si è raggiunta una confidenza soddisfacente del corretto funzionamento di cargorobot. 
 
@@ -811,9 +812,10 @@ QActor external_client context ctx_cargoservice{
 
 ## Progettazione
 
-Uno dei vari pregi della modellazione di sistemi tramite il DSL QAK è che **i modelli prodotti sono eseguibili**. Questo significa la fase di progettazione viene largamente ridotta in quanto non è necessario pensare a **come** implementare quanto modellato.
+Uno dei vari pregi della modellazione di sistemi tramite il DSL QAK è che **i modelli prodotti sono eseguibili**.  
+Questo significa la fase di progettazione viene largamente ridotta in quanto non è necessario pensare a **come** implementare quanto modellato.
 
-In questo sprint, l'unica modifica fatta in progettazione è stata quella di introdurre un **file di configurazione per il _cargorobot_** in cui specificare le coordinate e il direzionamento richiesto nelle posizioni notevoli nel _deposito_, e la lunghezza dello step. 
+In questo sprint, l'unica modifica fatta in progettazione è stata quella di introdurre un **file di configurazione per il cargorobot** in cui specificare le coordinate e il direzionamento richiesto nelle posizioni notevoli nel deposito, e la lunghezza dello step. 
 
 ```json
 //cargorobot_conf.json
@@ -838,7 +840,7 @@ In questo sprint, l'unica modifica fatta in progettazione è stata quella di int
 }
 ```
 
-A questo punto, tramite un POJO che carica il file di configurazione, la configurazione di _cargorobot_ diventa parametrica e non più hardcoded.
+A questo punto, tramite un POJO che carica il file di configurazione, la configurazione di cargorobot diventa parametrica e non più hardcoded, e quindi più flessibile.
 
 ```Java
 public class CargoRobotConfigLoader {
@@ -905,11 +907,13 @@ Per avviare il progetto:
 
 <h4 class="alarm">Nota:</h4>
 
-Si è tentato di containerizzare il contesto *ctx_cargoservice* ma si è fallito in quanto la distribuzione creata da gradle era difettosa. Non si è capito il perchè... (magari se ne può discutere in un colloquio)
+Si è tentato di containerizzare anche il contesto *ctx_cargoservice*, senza successo.  
+La distribuzione creata da gradle risulta difettosa e non si è individuata una causa chiara (colloquio).
 
 ## Sintesi Finale e Nuova Architettura
 
-In questo sprint 1 si sono implementati i componenti che definiscono il corebuisness del sistema: [cargoservice](#cargoservice) e [cargorobot](#cargorobot). Nel far questo si sono anche definite le interfaccie per i componenti hold e sonar da svilupparsi nei prossimi sprint.
+In questo sprint 1 si sono implementati i componenti che definiscono il corebuisness del sistema: [cargoservice](#cargoservice) e [cargorobot](#cargorobot).  
+Nel far questo si sono anche definite le interfaccie per i componenti hold e sonar da svilupparsi nei prossimi sprint.
 
 L'architettura del sistema risultante da questo sprint è la seguente.
 
