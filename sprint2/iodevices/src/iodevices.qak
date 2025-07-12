@@ -14,7 +14,7 @@ Context ctx_iodevices 				ip [host="localhost" port=8001]
 
 //QActor sonarsimul  context ctx_iodevices{
 //	State s0 initial{
-//		
+//		println("$name | start")
 //	}
 //	Goto work
 //
@@ -57,7 +57,7 @@ Context ctx_iodevices 				ip [host="localhost" port=8001]
 //	    delay 1000
 //	    emitlocalstream measurement      : measurement(10)
 //	    delay 1000
-//	    
+//	     
 //	    // guasto per 5 secondi
 //	    emitlocalstream measurement      : measurement(31)
 //	    delay 1000
@@ -172,27 +172,29 @@ QActor measure_processor context ctx_iodevices {
 			#]
 			
 			if [#  M < DFREE/2 #] { 
-//				println("$name | container presente") color blue // DEBUG
+				println("$name | container presente") color blue // DEBUG
 				[# CurrentIntervallo = IntervalliMisurazioni.CONTAINER_PRESENTE #]
 				if [# Guasto #] {
 					println("$name | sonar ripristinato") color green
 					[# Guasto = false #]
+					updateResource [# "ripristinato" #] 
 					emit riprendi_tutto : riprendi_tutto(si)
 				}
 			}
 			
 			if [# M >= DFREE/2 && M <= DFREE #] { 
-//				println("$name | container assente") color blue // DEBUG
+				println("$name | container assente") color blue // DEBUG
 				[# CurrentIntervallo = IntervalliMisurazioni.CONTAINER_ASSENTE #]
 				if [# Guasto #] {
 					println("$name | sonar ripristinato") color green
 					[# Guasto = false #]
+					updateResource [# "ripristinato" #] 
 					emit riprendi_tutto : riprendi_tutto(si)
 				}
 			}
 			
 			if [# M > DFREE #] { 
-//				println("$name | guasto!!!") color blue // DEBUG
+				println("$name | guasto!!!") color blue // DEBUG
 				[# CurrentIntervallo = IntervalliMisurazioni.GUASTO #]
 			} 
 			
@@ -206,6 +208,7 @@ QActor measure_processor context ctx_iodevices {
 					        if(CounterIntervallo == 3) {
 					        	CommUtils.outmagenta("Container presente consistentemente")
         	#]
+        						updateResource [# "container_arrived" #] 
 								emit container_arrived : container_arrived(si)
 			[#
 					    		CounterIntervallo = 0
@@ -215,6 +218,7 @@ QActor measure_processor context ctx_iodevices {
 					    	if(CounterIntervallo == 3) {
 					        	CommUtils.outmagenta("Container assente consistentemente")
         	#]
+        						updateResource [# "container_absent" #] 
 								emit container_absent : container_absent(si)
 			[#
 					    		CounterIntervallo = 0
@@ -225,6 +229,7 @@ QActor measure_processor context ctx_iodevices {
 								CommUtils.outred("Guasto consistente")	
 								Guasto = true
 			#]
+								updateResource [# "guasto" #] 
 								emit interrompi_tutto : interrompi_tutto(si)
 			[#
 								CounterIntervallo = 0			    		
@@ -245,6 +250,8 @@ QActor measure_processor context ctx_iodevices {
 				LastIntervallo = CurrentIntervallo
 			#]
 		}
+		
+		delay 20 // delay necessario altrimenti si perdono delle updateResource (l'infrastruttura QAK è misteriosa)
 	}
 	Goto listen_for_measurement
 }

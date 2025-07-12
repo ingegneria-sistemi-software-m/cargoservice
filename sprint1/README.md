@@ -256,13 +256,17 @@ Il cargorobot dovrà mantenere in memoria una **mappa** che associa: nomi degli 
 
 Siccome il guasto del sonar può avvenire in qualsiasi momento, cargorobot dovrà essere **sempre recettivo all'evento di guasto** per potersi interrompere tempestivamente. Questa significa che cargorobot dovrà necessariamente avere uno **stato persistente di attesa**, in cui attende che il sonar riprenda a funzionare, ed uno **stato di ripristino**, in cui riprende cio che stava facendo prima.
 
+
+#### Come fa cargorobot a interrompere/riprendere le sue attività?
+Siccome il guasto del sonar può avvenire in qualsiasi momento, _cargorobot_ dovrà essere **sempre recettivo all'evento di guasto** per potersi interrompere tempestivamente. Questa significa che _cargorobot_ dovrà necessariamente avere uno **stato persistente di attesa**, in cui attende che il _sonar_ riprenda a funzionare, ed uno **stato di ripristino**, in cui riprende cio che stava facendo prima.
 ##### Come fa cargorobot a bloccare il basicrobot in movimento?**
 
 Un guasto del sonar può avvenire dopo che cargorobot ha comandato basicrobot di spostarsi, ma prima che basicrobot abbia terminato lo spostamento. In queste situazioni, cargorobot può entrare nello stato di attesa citato prima, ma basicrobot (che è un attore dotato di un proprio flusso di controllo) continuerebbe ad eseguire il piano di spostamento.
 
-Fortunatamente, il committente ha previsto un evento di nome: **"Event alarm : alarm(X)"** nell'interfaccia del basicrobot con cui è possibile interrompere l'esecuzione del piano. 
+#### Come fa _cargorobot_ a bloccare il _basicrobot_ in movimento?
+Un guasto del sonar può avvenire dopo che _cargorobot_ ha comandato _basicrobot_ di spostarsi, ma prima che _basicrobot_ abbia terminato lo spostamento. In queste situazioni, _cargorobot_ può entrare nello stato di attesa citato prima, ma _basicrobot_ (che è un attore dotato di un proprio flusso di controllo) continuerebbe ad eseguire il piano di spostamento.
 
-Per bloccare il basicrobot è quindi sufficiente emettere l'evento alarm nello stato persistente di attesa di cargorobot.
+Fortunatamente, il committente ha previsto un evento di nome: **"Event alarm : alarm(X)"** nell'interfaccia del basicrobot con cui è possibile interrompere l'esecuzione del piano. Per bloccare il basicrobot è quindi sufficiente emettere l'evento alarm nello stato persistente di attesa di cargorobot.
 
 ##### Come fa cargorobot a ricordarsi dove doveva andare una volta interrotto durante uno spostamento?**
 
@@ -275,6 +279,8 @@ In questa maniera, se interrotto durante uno spostamento, nello stato di riprist
 Se cargorobot viene interrotto mentre non si sta spostando, nello stato di ripristino non sarò necessario effettuare questa richiesta. 
 
 ##### Come fa cargorobot a sapere se il container è già presente all'IO-port o meno, prima di arrivarci?
+
+#### Come fa cargorobot a sapere se il container è già presente all'IO-port o meno, prima di arrivarci?
 
 Similmente ai guasti del sonar, **un container può arrivare all'IO-port in qualsiasi momento** e per questo motivo cargorobot dovrà essere sempre recettivo agli eventi del sonar che avvisano della presenza/assenza di un container.
 
@@ -697,6 +703,8 @@ L'analisi del componente _cargoservice_ ha portato a definire il seguente nuovo 
     }
 ```
 
+<!-- dire che è difficile automatizzare i test unitari -->
+Per quanto riguarda il cargorobot, **risulta difficile pensare a dei testi unitiari automatici per collaudare il suo funzionamento**.
 
 Per quanto riguarda il cargorobot, **risulta difficile automatizzare i testi unitiari**, ma è comunque **possibile collaudare il suo funzionamento**.  
 Idealmente, vorremmo accedere alle variabili dell WEnv ma possiamo accontentarci di visualizzare il movimento, senza automatizzare nulla.
@@ -734,7 +742,7 @@ QActor hold_mock context ctx_cargoservice{
 									  reserve_slot_success(slot1)
 		} 
 		if [# Counter == 1 #] {
-			replyTo reserve_slot with reserve_slot_success :
+			replyTo reserve_slot with reserve_slot_fail :
 									  reserve_slot_fail(troppo peso)
 		}
 		if [# Counter == 2 #] {
@@ -742,7 +750,7 @@ QActor hold_mock context ctx_cargoservice{
 									  reserve_slot_success(slot3)
 		}
 		if [# Counter == 3 #] {
-			replyTo reserve_slot with reserve_slot_success :
+			replyTo reserve_slot with reserve_slot_fail :
 									  reserve_slot_fail(no slot liberi)
 		}
 		

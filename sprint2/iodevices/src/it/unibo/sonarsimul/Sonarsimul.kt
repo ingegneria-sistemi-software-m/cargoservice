@@ -32,6 +32,7 @@ class Sonarsimul ( name: String, scope: CoroutineScope, isconfined: Boolean=fals
 		return { //this:ActionBasciFsm
 				state("s0") { //this:State
 					action { //it:State
+						CommUtils.outblack("$name | start")
 						//genTimer( actor, state )
 					}
 					//After Lenzi Aug2002
@@ -42,35 +43,6 @@ class Sonarsimul ( name: String, scope: CoroutineScope, isconfined: Boolean=fals
 				state("work") { //this:State
 					action { //it:State
 						delay(1000) 
-						emitLocalStreamEvent("measurement", "measurement(30)" ) 
-						delay(1000) 
-						emitLocalStreamEvent("measurement", "measurement(15)" ) 
-						delay(1000) 
-						emitLocalStreamEvent("measurement", "measurement(10)" ) 
-						delay(1000) 
-						emitLocalStreamEvent("measurement", "measurement(0)" ) 
-						delay(1000) 
-						emitLocalStreamEvent("measurement", "measurement(40)" ) 
-						emitLocalStreamEvent("measurement", "measurement(20)" ) 
-						delay(1000) 
-						emitLocalStreamEvent("measurement", "measurement(20)" ) 
-						delay(1000) 
-						emitLocalStreamEvent("measurement", "measurement(20)" ) 
-						delay(1000) 
-						emitLocalStreamEvent("measurement", "measurement(20)" ) 
-						delay(1000) 
-						emitLocalStreamEvent("measurement", "measurement(10)" ) 
-						delay(1000) 
-						emitLocalStreamEvent("measurement", "measurement(10)" ) 
-						delay(1000) 
-						emitLocalStreamEvent("measurement", "measurement(10)" ) 
-						delay(1000) 
-						emitLocalStreamEvent("measurement", "measurement(10)" ) 
-						delay(1000) 
-						emitLocalStreamEvent("measurement", "measurement(10)" ) 
-						delay(1000) 
-						emitLocalStreamEvent("measurement", "measurement(10)" ) 
-						delay(1000) 
 						emitLocalStreamEvent("measurement", "measurement(31)" ) 
 						delay(1000) 
 						emitLocalStreamEvent("measurement", "measurement(31)" ) 
@@ -82,14 +54,6 @@ class Sonarsimul ( name: String, scope: CoroutineScope, isconfined: Boolean=fals
 						emitLocalStreamEvent("measurement", "measurement(31)" ) 
 						delay(1000) 
 						emitLocalStreamEvent("measurement", "measurement(10)" ) 
-						delay(1000) 
-						emitLocalStreamEvent("measurement", "measurement(10)" ) 
-						delay(1000) 
-						emitLocalStreamEvent("measurement", "measurement(20)" ) 
-						delay(1000) 
-						emitLocalStreamEvent("measurement", "measurement(20)" ) 
-						delay(1000) 
-						emitLocalStreamEvent("measurement", "measurement(20)" ) 
 						delay(1000) 
 						//genTimer( actor, state )
 					}

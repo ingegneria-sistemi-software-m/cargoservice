@@ -66,23 +66,30 @@ class Measure_processor ( name: String, scope: CoroutineScope, isconfined: Boole
 												val M = payloadArg(0).toInt()	
 												CounterIntervallo++
 								if(   M < DFREE/2  
-								 ){ CurrentIntervallo = IntervalliMisurazioni.CONTAINER_PRESENTE  
+								 ){CommUtils.outblue("$name | container presente")
+								 CurrentIntervallo = IntervalliMisurazioni.CONTAINER_PRESENTE  
 								if(  Guasto  
 								 ){CommUtils.outgreen("$name | sonar ripristinato")
 								 Guasto = false  
+								updateResourceRep( "ripristinato"  
+								)
 								emit("riprendi_tutto", "riprendi_tutto(si)" ) 
 								}
 								}
 								if(  M >= DFREE/2 && M <= DFREE  
-								 ){ CurrentIntervallo = IntervalliMisurazioni.CONTAINER_ASSENTE  
+								 ){CommUtils.outblue("$name | container assente")
+								 CurrentIntervallo = IntervalliMisurazioni.CONTAINER_ASSENTE  
 								if(  Guasto  
 								 ){CommUtils.outgreen("$name | sonar ripristinato")
 								 Guasto = false  
+								updateResourceRep( "ripristinato"  
+								)
 								emit("riprendi_tutto", "riprendi_tutto(si)" ) 
 								}
 								}
 								if(  M > DFREE  
-								 ){ CurrentIntervallo = IntervalliMisurazioni.GUASTO  
+								 ){CommUtils.outblue("$name | guasto!!!")
+								 CurrentIntervallo = IntervalliMisurazioni.GUASTO  
 								}
 								
 												if(CurrentIntervallo==LastIntervallo && LastIntervallo!=IntervalliMisurazioni.PRIMA_MISURAZIONE) {
@@ -93,6 +100,8 @@ class Measure_processor ( name: String, scope: CoroutineScope, isconfined: Boole
 													    IntervalliMisurazioni.CONTAINER_PRESENTE -> {
 													        if(CounterIntervallo == 3) {
 													        	CommUtils.outmagenta("Container presente consistentemente")
+								updateResourceRep( "container_arrived"  
+								)
 								emit("container_arrived", "container_arrived(si)" ) 
 								
 													    		CounterIntervallo = 0
@@ -101,6 +110,8 @@ class Measure_processor ( name: String, scope: CoroutineScope, isconfined: Boole
 													    IntervalliMisurazioni.CONTAINER_ASSENTE -> {
 													    	if(CounterIntervallo == 3) {
 													        	CommUtils.outmagenta("Container assente consistentemente")
+								updateResourceRep( "container_absent"  
+								)
 								emit("container_absent", "container_absent(si)" ) 
 								
 													    		CounterIntervallo = 0
@@ -110,6 +121,8 @@ class Measure_processor ( name: String, scope: CoroutineScope, isconfined: Boole
 													    	if(CounterIntervallo == 3) {
 																CommUtils.outred("Guasto consistente")	
 																Guasto = true
+								updateResourceRep( "guasto"  
+								)
 								emit("interrompi_tutto", "interrompi_tutto(si)" ) 
 								
 																CounterIntervallo = 0			    		
@@ -129,6 +142,7 @@ class Measure_processor ( name: String, scope: CoroutineScope, isconfined: Boole
 												
 												LastIntervallo = CurrentIntervallo
 						}
+						delay(20) 
 						//genTimer( actor, state )
 					}
 					//After Lenzi Aug2002
