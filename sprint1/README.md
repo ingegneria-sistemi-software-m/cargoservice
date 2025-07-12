@@ -252,7 +252,7 @@ L'analisi fatta fino ad ora evidenzia una serie di problematiche.
 
 ##### Come fa cargorobot a conoscere  le coordinate a cui si deve posizionare, e l'orientamento che deve avere, dato solo il nome dello slot riservato nella richiesta di intervento di carico?
 
-cargorobot dovrà mantenere nel suo stato una **mappa** che associa: nomi degli slot, con le coordinate delle laydown-position e l'orientamento che deve avere una volta raggiunte quest'ultime. 
+Il cargorobot dovrà mantenere in memoria una **mappa** che associa: nomi degli slot, con le coordinate delle laydown-position e l'orientamento che deve avere una volta raggiunte quest'ultime. 
 
 ##### Come fa cargorobot a interrompere/riprendere le sue attività?**
 
@@ -268,7 +268,7 @@ Per bloccare il basicrobot è quindi sufficiente emettere l'evento alarm nello s
 
 ##### Come fa cargorobot a ricordarsi dove doveva andare una volta interrotto durante uno spostamento?**
 
-cargorobot dovrà mantenere nel suo stato due informazioni aggiuntive:
+cargorobot dovrà mantenere in memoria due informazioni aggiuntive:
 - un flag che indica se si stava muovendo
 - la sua destinazione corrente
 
@@ -280,7 +280,7 @@ Se cargorobot viene interrotto mentre non si sta spostando, nello stato di ripri
 
 Similmente ai guasti del sonar, **un container può arrivare all'IO-port in qualsiasi momento** e per questo motivo cargorobot dovrà essere sempre recettivo agli eventi del sonar che avvisano della presenza/assenza di un container.
 
-A questo punto, sarà sufficiente che cargorobot mantenga nel suo stato un **flag booleano** che salva l'informazione riguardante la presenza/assenza di un container. cargorobot aggiornerà questo stato con delle **routine di gestione** che si attivano in corrispondenza degli eventi del sonar.  
+A questo punto, sarà sufficiente che cargorobot mantenga in memoria un **flag booleano** che salva l'informazione riguardante la presenza/assenza di un container. cargorobot si aggiornerà con delle **routine di gestione** che si attivano in corrispondenza degli eventi del sonar.  
 
 #### Nuovi messaggi
 
@@ -578,7 +578,6 @@ QActor cargorobot context ctx_cargoservice{
 		whenInterruptEvent container_absent  -> container_absent_handler
 		whenReply moverobotdone 			 -> arrived_at_io_port  
 
-
   	State at_home{
    		println("$name | at home") color magenta
    		forward basicrobot -m setdirection : dir(down)
@@ -596,10 +595,7 @@ QActor cargorobot context ctx_cargoservice{
 	   	whenInterruptEvent interrompi_tutto  -> wait_resume_msg
 		whenInterruptEvent container_arrived -> container_arrived_handler
 		whenInterruptEvent container_absent  -> container_absent_handler
-   		whenMsg continue 					 -> wait_request
-   	
-   	
-   	
+   		whenMsg continue 					 -> wait_request   	
    	
    	/* gestisco le interruzioni */
    	
@@ -903,7 +899,6 @@ Per avviare il progetto:
 4. posizionarsi dentro alla cartella system1/
 
 5. eseguire ```./gradlew run``` per lanciare il resto del sistema
-
 
 <h4 class="alarm">Nota:</h4>
 
