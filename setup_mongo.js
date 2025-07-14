@@ -21,23 +21,23 @@ async function main() {
     const documentsToInsert = [
       {
         productId: 20,
-        jsonMap: "{\"productId\":20,\"name\":\"p20\",\"weight\":200}"
+        jsonRep: "{\"productId\":20,\"name\":\"p20\",\"weight\":200}"
       },
       {
         productId: 21,
-        jsonMap: "{\"productId\":21,\"name\":\"p21\",\"weight\":210}"
+        jsonRep: "{\"productId\":21,\"name\":\"p21\",\"weight\":210}"
       },
       {
         productId: 22,
-        jsonMap: "{\"productId\":22,\"name\":\"p22\",\"weight\":220}"
+        jsonRep: "{\"productId\":22,\"name\":\"p22\",\"weight\":220}"
       },
       {
         productId: 23,
-        jsonMap: "{\"productId\":23,\"name\":\"p23\",\"weight\":230}"
+        jsonRep: "{\"productId\":23,\"name\":\"p23\",\"weight\":230}"
       },
       {
         productId: 17,
-        jsonMap: "{\"productId\":17,\"name\":\"p17\",\"weight\":170}"
+        jsonRep: "{\"productId\":17,\"name\":\"p17\",\"weight\":170}"
       }
     ];
 
