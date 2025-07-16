@@ -466,7 +466,7 @@ L'attore _hold_ è responsabile di effettuare dinamicamente la prenotazione degl
 
 Il tipico ciclo di attività di _hold_ è il seguente:
 1. _hold_ riceve da _cargoservice_ una richiesta di prenotazione di uno slot.
-2. _hold_ ha il compito di tenere traccia della disponibilità degli slot liberi e del carico cumulativo e in base a ciò valutare la possibilità di effettuare l'intervento di carico. In questo caso vi sono 3 possibilità:
+2. _hold_ ha il compito di tenere traccia della disponibilità degli slot liberi e del carico cumulativo e in base a ciò valutare la possibilità di effettuare l'intervento di carico. Le casistiche previste sono le seguenti:
 	- Se il carico cumulativo (peso del nuovo container + carico attuale della nave) supera il MaxLoad della nave non è possibile caricare il container. In tal caso risponde al _cargoservice_ con **reserve_slot_fail**
 	- Se il carico cumulativo non supera il MaxLoad e non sono presenti slot liberi, anche in questo caso non è possibile caricare il container. In tal caso risponde al _cargoservice_ con **reserve_slot_fail** 
 	- Se Il carico cumulativo non supera il MaxLoad e vi è almeno uno slot libero è possibile procedere con il carico della nave. La risposta al _cargoservice_ sarà **reserve_slot_success_**
@@ -476,9 +476,145 @@ Il ciclo di attività dell'attore _hold_ è divisibile in due fasi:
 - fase di ricezione : Attesa passiva di messaggi (reserve_slot)
 - fase di elaborazione : validazione delle richieste e aggiornamento dello stato interno
 
-La fase di scarico non è compito nostro.
+Si vuole sottolineare in questa parte che si è evinto dall'analisi dei requisiti che non è necessario implementare la casistica in cui gli slot di _hold_ si liberino.
 
-Lo stao hold verrà osservato dalla gui , in qualsiasi momento la gui si può attivare ,
+In questa fase si è anche svolto una valutazione relativa al legame tra _hold_ e la componente web-GUI data la necessità futura di stabilire una comunicazione tra le due componenti. In particolare, si è ipotizzato che la web-GUI debba osservare in tempo reale lo stato della stiva. Per questo motivo, è stata prevista un'estensione del comportamento dell'attore _hold_:
+ 1. Inizializzazione dello stato: trasmissione dello stato iniziale di _hold_ alla GUI
+ 2. Aggiornamento in tempo reale : emissione di eventi da parte di _hold_ che notificano alla GUI cambiamenti dello stato interno.
+
+### Messaggi
+
+
+```
+Request reserve_slot         : reserve_slot(WEIGHT) 			    	   "richiesta verso hold per prenotare uno slot. Contiene il peso del prodotto da caricare"
+Reply   reserve_slot_success : reserve_slot_success(SLOT) for reserve_slot "se la richiesta è soddisfacibile, hold restituisce il nome/id dello slot prenotato"
+Reply   reserve_slot_fail    : reserve_slot_fail(CAUSA) for reserve_slot   "fallisce se il peso supera MaxLoad oppure se non c'è uno slot libero"
+
+Request get_hold_state		 : get_hold_state(X)						   "richiesta verso hold per conoscere lo stato iniziale del deposito.Contiene il peso attuale e lo stato degli slot"
+Reply   hold_state			 : hold_state(JSonString)					   "risposta verso gui da parte di hold con le informazioni interne del deposito"
+
+Event	hold_update			 : hold_update(JSonString)					   "evento che avvisa di un cambiamento nello stato interno di hold"
+
+```
+
+### Modello Hold
+
+L'analisi fatta finora ha portato al seguente modello.
+
+```Java
+QActor hold context ctx_cargoservice{
+	//Variabili di stato di Hold MaxLoad:Massimo peso caricabile sulla nave , Currentload: Peso del carico in un dato istante , slots: presenza o assenza di carico in un determinato slot
+	[# 
+		var MaxLoad = 500
+		var currentLoad = 0
+		val slots = hashMapOf(
+			"slot1" to true, 
+			"slot2" to true,
+			"slot3" to true,
+			"slot4" to true
+		)
+
+	
+	fun getHoldStateJson(): String {
+    
+    val slotsJson = slots.map { (key, value) ->
+        "\"$key\": \"${if (value) "free" else "occupied"}\""
+    }.joinToString(", ")
+
+    val rawJson = """{"currentLoad":$currentLoad,"slots":{$slotsJson}}"""
+
+//  println("DEBUG raw JSON: $rawJson")
+
+    return "'${rawJson.replace("'", "\\'")}'"
+    
+    }
+	#]
+	
+	
+	State s0 initial {
+		println("$name | STARTS - MaxLoad: $MaxLoad kg, Slots: $slots") color yellow
+    
+	}
+	Goto wait_request
+	
+	  
+	State wait_request{
+		println("$name | waiting for reservation requests") color yellow
+		
+	}
+	Transition t0
+	   whenRequest get_hold_state -> serving_get_hold_state
+	   whenRequest reserve_slot -> check_reservation
+	  
+	/*Verifico la presenza di slot liberi all'interno della stiva e che il MaxLoad della nave non venga superato */
+	
+	State check_reservation{
+		onMsg(reserve_slot : reserve_slot(WEIGHT)){
+			[#
+				val weight = payloadArg(0).toInt()
+				var FreeSlot: String ?= null
+				var Cause = "" 
+
+				if (currentLoad + weight > MaxLoad){
+					Cause= "Exceeds MaxLoad"
+				
+				}else{
+					FreeSlot = slots.entries.find {it.value}?.key // restituisce la chiave del  primo elemento della entry con valore true oppure restituisce null
+					if (FreeSlot == null){
+						Cause = "All slots are occupied"
+					}
+				}
+			#]
+
+			if [# FreeSlot != null #]{
+				
+				println("$name | reserving $FreeSlot for weight $weight") color green
+				[# 
+					slots[FreeSlot]=false
+					currentLoad +=weight
+					val JsonState = getHoldStateJson()
+            		
+				#]
+				emit hold_update : hold_update($JsonState)
+				replyTo reserve_slot with reserve_slot_success : reserve_slot_success($FreeSlot)
+
+			}else{
+				println("$name | reservation refused: $Cause") color red
+				replyTo reserve_slot with reserve_slot_fail : reserve_slot_fail($Cause)
+
+			}
+		}
+	}
+	Goto wait_request
+ 
+
+	//Stato dell'attore che si occupa di rispondere con lo stato iniziale del deposito
+	State serving_get_hold_state{
+		onMsg(get_hold_state : get_hold_state(X)){
+			[#
+				val JsonState = getHoldStateJson()
+			#]
+			println("$name | sending hold state") color yellow
+			println("$name | DEBUG wrapped   = $JsonState") color red
+			replyTo get_hold_state with hold_state : hold_state($JsonState)
+		}
+		
+	}
+	Goto wait_request
+}
+```
+## Piano di test
+### Hold
+
+#### Scenario 1: Test prenotazione riuscita 
+
+#### Scenario 2: Test intervento di carico rifiutato per superamento di MaxLoad
+
+#### Scenario 3: Prenotazione fallita data da nessuno slot libero
+
+#### Scenario 4: Richiesta dello stato corrente del deposito
+
+#### Scenario 5: Verifica aggiornamento dello stato dopo una prenotazione
 
 
 ## Progettazione
