@@ -14,10 +14,10 @@ Reply   getProductAnswer: product( JSonString ) for getProduct
 Request reserve_slot         : reserve_slot(WEIGHT) 			    	   "richiesta verso hold per prenotare uno slot. Contiene il peso del prodotto da caricare"
 Reply   reserve_slot_success : reserve_slot_success(SLOT) for reserve_slot "se la richiesta è soddisfacibile, hold restituisce il nome/id dello slot prenotato"
 Reply   reserve_slot_fail    : reserve_slot_fail(CAUSA) for reserve_slot   "fallisce se il peso supera MaxLoad oppure se non c'è uno slot libero"
-Request get_hold_state		 : get_hold_state(X)
-Reply   hold_state			 : hold_state(JSonString)
+Request get_hold_state		 : get_hold_state(X)						   "richiesta verso hold per conoscere lo stato iniziale del deposito.Contiene il peso attuale e lo stato degli slot"
+Reply   hold_state			 : hold_state(JSonString)					   "risposta verso gui da parte di hold con le informazioni interne del deposito"
 
-Event	hold_update			 : hold_update(JSonString)
+Event	hold_update			 : hold_update(JSonString)					   "evento che avvisa di un cambiamento nello stato interno di hold"
 
 /* Messaggi per l'interazione con cargorobot */
 Request handle_load_operation   : handle_load_operation(SLOT) 			  				"richiesta verso cargorobot per l'intervento di carico"
@@ -632,29 +632,47 @@ import "main.java.*"
 
 
 QActor hold context ctx_cargoservice{
-	
+	//Variabili di stato di Hold MaxLoad:Massimo peso caricabile sulla nave , Currentload: Peso del carico in un dato istante , slots: presenza o assenza di carico in un determinato slot
 	[# 
 		var MaxLoad = 500
 		var currentLoad = 0
 		val slots = hashMapOf(
-			"slot1" to true, //
+			"slot1" to true, 
 			"slot2" to true,
 			"slot3" to true,
 			"slot4" to true
 		)
+
+	
+	fun getHoldStateJson(): String {
+    
+    val slotsJson = slots.map { (key, value) ->
+        "\"$key\": \"${if (value) "free" else "occupied"}\""
+    }.joinToString(", ")
+
+    val rawJson = """{"currentLoad":$currentLoad,"slots":{$slotsJson}}"""
+
+//  println("DEBUG raw JSON: $rawJson")
+
+    return "'${rawJson.replace("'", "\\'")}'"
+    
+    }
 	#]
+	
 	
 	State s0 initial {
 		println("$name | STARTS - MaxLoad: $MaxLoad kg, Slots: $slots") color yellow
+    
 	}
 	Goto wait_request
 	
 	  
 	State wait_request{
 		println("$name | waiting for reservation requests") color yellow
+		
 	}
 	Transition t0
-//	   whenRequest get_hold_state -> serving_get_hold_state
+	   whenRequest get_hold_state -> serving_get_hold_state
 	   whenRequest reserve_slot -> check_reservation
 	  
 	/*Verifico la presenza di slot liberi all'interno della stiva e che il MaxLoad della nave non venga superato */
@@ -667,10 +685,10 @@ QActor hold context ctx_cargoservice{
 				var Cause = "" 
 
 				if (currentLoad + weight > MaxLoad){
-					Cause= "Adding weight $weight exceeds MaxLoad $MaxLoad"
+					Cause= "Exceeds MaxLoad"
 				
 				}else{
-					FreeSlot = slots.entries.find {it.value}?.key
+					FreeSlot = slots.entries.find {it.value}?.key // restituisce la chiave del  primo elemento della entry con valore true oppure restituisce null
 					if (FreeSlot == null){
 						Cause = "All slots are occupied"
 					}
@@ -683,7 +701,10 @@ QActor hold context ctx_cargoservice{
 				[# 
 					slots[FreeSlot]=false
 					currentLoad +=weight
+					val JsonState = getHoldStateJson()
+            		
 				#]
+				emit hold_update : hold_update($JsonState)
 				replyTo reserve_slot with reserve_slot_success : reserve_slot_success($FreeSlot)
 
 			}else{
@@ -696,11 +717,19 @@ QActor hold context ctx_cargoservice{
 	Goto wait_request
  
 
-//	State serving_get_hold_state{
-//		replyTo 
-//
-//	}
-//	Goto wait_request
+	//Stato dell'attore che si occupa di rispondere con lo stato iniziale del deposito
+	State serving_get_hold_state{
+		onMsg(get_hold_state : get_hold_state(X)){
+			[#
+				val JsonState = getHoldStateJson()
+			#]
+			println("$name | sending hold state") color yellow
+			println("$name | DEBUG wrapped   = $JsonState") color red
+			replyTo get_hold_state with hold_state : hold_state($JsonState)
+		}
+		
+	}
+	Goto wait_request
 }
 
 QActor external_client context ctx_cargoservice{

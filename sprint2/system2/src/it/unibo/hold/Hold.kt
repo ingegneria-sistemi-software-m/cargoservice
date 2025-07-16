@@ -33,11 +33,26 @@ class Hold ( name: String, scope: CoroutineScope, isconfined: Boolean=false, isd
 				var MaxLoad = 500
 				var currentLoad = 0
 				val slots = hashMapOf(
-					"slot1" to true, //
+					"slot1" to true, 
 					"slot2" to true,
 					"slot3" to true,
 					"slot4" to true
 				)
+		
+			
+			fun getHoldStateJson(): String {
+		    
+		    val slotsJson = slots.map { (key, value) ->
+		        "\"$key\": \"${if (value) "free" else "occupied"}\""
+		    }.joinToString(", ")
+		
+		    val rawJson = """{"currentLoad":$currentLoad,"slots":{$slotsJson}}"""
+		
+		//  println("DEBUG raw JSON: $rawJson")
+		
+		    return "'${rawJson.replace("'", "\\'")}'"
+		    
+		    }
 		return { //this:ActionBasciFsm
 				state("s0") { //this:State
 					action { //it:State
@@ -57,7 +72,8 @@ class Hold ( name: String, scope: CoroutineScope, isconfined: Boolean=false, isd
 					//After Lenzi Aug2002
 					sysaction { //it:State
 					}	 	 
-					 transition(edgeName="t052",targetState="check_reservation",cond=whenRequest("reserve_slot"))
+					 transition(edgeName="t052",targetState="serving_get_hold_state",cond=whenRequest("get_hold_state"))
+					transition(edgeName="t053",targetState="check_reservation",cond=whenRequest("reserve_slot"))
 				}	 
 				state("check_reservation") { //this:State
 					action { //it:State
@@ -69,10 +85,10 @@ class Hold ( name: String, scope: CoroutineScope, isconfined: Boolean=false, isd
 												var Cause = "" 
 								
 												if (currentLoad + weight > MaxLoad){
-													Cause= "Adding weight $weight exceeds MaxLoad $MaxLoad"
+													Cause= "Exceeds MaxLoad"
 												
 												}else{
-													FreeSlot = slots.entries.find {it.value}?.key
+													FreeSlot = slots.entries.find {it.value}?.key // restituisce la chiave del  primo elemento della entry con valore true oppure restituisce null
 													if (FreeSlot == null){
 														Cause = "All slots are occupied"
 													}
@@ -82,12 +98,32 @@ class Hold ( name: String, scope: CoroutineScope, isconfined: Boolean=false, isd
 								 
 													slots[FreeSlot]=false
 													currentLoad +=weight
+													val JsonState = getHoldStateJson()
+								            		
+								emit("hold_update", "hold_update($JsonState)" ) 
 								answer("reserve_slot", "reserve_slot_success", "reserve_slot_success($FreeSlot)"   )  
 								}
 								else
 								 {CommUtils.outred("$name | reservation refused: $Cause")
 								 answer("reserve_slot", "reserve_slot_fail", "reserve_slot_fail($Cause)"   )  
 								 }
+						}
+						//genTimer( actor, state )
+					}
+					//After Lenzi Aug2002
+					sysaction { //it:State
+					}	 	 
+					 transition( edgeName="goto",targetState="wait_request", cond=doswitch() )
+				}	 
+				state("serving_get_hold_state") { //this:State
+					action { //it:State
+						if( checkMsgContent( Term.createTerm("get_hold_state(X)"), Term.createTerm("get_hold_state(X)"), 
+						                        currentMsg.msgContent()) ) { //set msgArgList
+								
+												val JsonState = getHoldStateJson()
+								CommUtils.outyellow("$name | sending hold state")
+								CommUtils.outred("$name | DEBUG wrapped   = $JsonState")
+								answer("get_hold_state", "hold_state", "hold_state($JsonState)"   )  
 						}
 						//genTimer( actor, state )
 					}

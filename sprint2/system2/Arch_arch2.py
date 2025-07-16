@@ -37,6 +37,7 @@ with Diagram('arch2Arch', show=False, outformat='png', graph_attr=graphattr) as 
      sys >> Edge( label='container_arrived', **evattr, decorate='true', fontcolor='darkgreen') >> cargorobot
      cargorobot >> Edge( label='alarm', **eventedgeattr, decorate='true', fontcolor='red') >> sys
      sys >> Edge( label='riprendi_tutto', **evattr, decorate='true', fontcolor='darkgreen') >> cargorobot
+     hold >> Edge( label='hold_update', **eventedgeattr, decorate='true', fontcolor='red') >> sys
      cargorobot >> Edge(color='magenta', style='solid', decorate='true', label='<engage<font color="darkgreen"> engagedone engagerefused</font> &nbsp; moverobot<font color="darkgreen"> moverobotdone moverobotfailed</font> &nbsp; >',  fontcolor='magenta') >> basicrobot
      external_client >> Edge(color='magenta', style='solid', decorate='true', label='<load_product<font color="darkgreen"> load_accepted load_refused</font> &nbsp; >',  fontcolor='magenta') >> cargoservice
      cargoservice >> Edge(color='magenta', style='solid', decorate='true', label='<getProduct<font color="darkgreen"> getProductAnswer</font> &nbsp; >',  fontcolor='magenta') >> productservice
