@@ -14,6 +14,10 @@ Reply   getProductAnswer: product( JSonString ) for getProduct
 Request reserve_slot         : reserve_slot(WEIGHT) 			    	   "richiesta verso hold per prenotare uno slot. Contiene il peso del prodotto da caricare"
 Reply   reserve_slot_success : reserve_slot_success(SLOT) for reserve_slot "se la richiesta è soddisfacibile, hold restituisce il nome/id dello slot prenotato"
 Reply   reserve_slot_fail    : reserve_slot_fail(CAUSA) for reserve_slot   "fallisce se il peso supera MaxLoad oppure se non c'è uno slot libero"
+Request get_hold_state		 : get_hold_state(X)
+Reply   hold_state			 : hold_state(JSonString)
+
+Event	hold_update			 : hold_update(JSonString)
 
 /* Messaggi per l'interazione con cargorobot */
 Request handle_load_operation   : handle_load_operation(SLOT) 			  				"richiesta verso cargorobot per l'intervento di carico"
@@ -24,6 +28,7 @@ Event container_arrived : container_arrived(X) "evento che avvisa della presenza
 Event container_absent  : container_absent(X)  "evento che avvisa dell'assenza di un container presso l'IO-port"
 Event interrompi_tutto  : interrompi_tutto(X)  "evento che avvisa di un malfunzionamento del sonar e che quindi costringe a interrompre tutte le attività"
 Event riprendi_tutto    : riprendi_tutto(X)    "evento che avvisa del ripristino del sonar e che quindi permette di continuare tutte le attività"
+
 
 /* Messaggi che uso per autodispatch */
 Dispatch continue : continue(X) 
@@ -169,11 +174,15 @@ QActor cargoservice context ctx_cargoservice {
 	State reserve_slot {
 		println("$name | checking with hold if a reservation with (PID: $Cur_prod_PID, KG: $Cur_prod_weight) is possible") color blue
 		
-		request hold_mock -m reserve_slot : reserve_slot($Cur_prod_weight)
+		request hold -m reserve_slot : reserve_slot($Cur_prod_weight)
 	}
+	
+	
     Transition t0
 	   whenReply reserve_slot_success -> load_cargo
 	   whenReply reserve_slot_fail	  -> reserve_slot_fail
+    
+    
     
     State reserve_slot_fail {
 		onMsg( reserve_slot_fail : reserve_slot_fail(CAUSA) ) {
@@ -619,79 +628,80 @@ import "main.java.*"
 
 
 
+/*********** HOLD ***********/
 
- 
- 
- 
 
- 
- 
- 
- 
-
- 
+QActor hold context ctx_cargoservice{
 	
-QActor hold_mock context ctx_cargoservice{
 	[# 
-		var Counter = 0
+		var MaxLoad = 500
+		var currentLoad = 0
+		val slots = hashMapOf(
+			"slot1" to true, //
+			"slot2" to true,
+			"slot3" to true,
+			"slot4" to true
+		)
 	#]
 	
 	State s0 initial {
-		println("$name | STARTS")
-	} 
+		println("$name | STARTS - MaxLoad: $MaxLoad kg, Slots: $slots") color yellow
+	}
 	Goto wait_request
 	
 	  
 	State wait_request{
-//		println("$name | waiting for request") color yellow
+		println("$name | waiting for reservation requests") color yellow
 	}
 	Transition t0
-	   whenRequest reserve_slot -> handle_request
+//	   whenRequest get_hold_state -> serving_get_hold_state
+	   whenRequest reserve_slot -> check_reservation
 	  
+	/*Verifico la presenza di slot liberi all'interno della stiva e che il MaxLoad della nave non venga superato */
 	
-	State handle_request{
-		delay 1000
-		
-		// risposte mock
-		if [# Counter == 0 #] {
-			replyTo reserve_slot with reserve_slot_success : reserve_slot_success(slot1)
-		} 
-		
-		if [# Counter == 1 #] {
-			replyTo reserve_slot with reserve_slot_success : reserve_slot_success(slot2)
+	State check_reservation{
+		onMsg(reserve_slot : reserve_slot(WEIGHT)){
+			[#
+				val weight = payloadArg(0).toInt()
+				var FreeSlot: String ?= null
+				var Cause = "" 
+
+				if (currentLoad + weight > MaxLoad){
+					Cause= "Adding weight $weight exceeds MaxLoad $MaxLoad"
+				
+				}else{
+					FreeSlot = slots.entries.find {it.value}?.key
+					if (FreeSlot == null){
+						Cause = "All slots are occupied"
+					}
+				}
+			#]
+
+			if [# FreeSlot != null #]{
+				
+				println("$name | reserving $FreeSlot for weight $weight") color green
+				[# 
+					slots[FreeSlot]=false
+					currentLoad +=weight
+				#]
+				replyTo reserve_slot with reserve_slot_success : reserve_slot_success($FreeSlot)
+
+			}else{
+				println("$name | reservation refused: $Cause") color red
+				replyTo reserve_slot with reserve_slot_fail : reserve_slot_fail($Cause)
+
+			}
 		}
-		
-		if [# Counter == 2 #] {
-			replyTo reserve_slot with reserve_slot_success : reserve_slot_success(slot3)
-		}
-		
-		if [# Counter == 3 #] {
-			replyTo reserve_slot with reserve_slot_success : reserve_slot_success(slot4)
-		}
-		
-		[# 
-			Counter++ 
-			
-			if(Counter == 4)
-				Counter = 0
-		#]
 	}
 	Goto wait_request
-} 
-
-
-
-
-
-
-
-
-
-
  
- 
- 
- 
+
+//	State serving_get_hold_state{
+//		replyTo 
+//
+//	}
+//	Goto wait_request
+}
 
 QActor external_client context ctx_cargoservice{
  	State s0 initial {

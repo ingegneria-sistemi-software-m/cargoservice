@@ -8,81 +8,84 @@ Event riprendi_tutto    : riprendi_tutto(X)    "evento che avvisa del ripristino
 
 
 Context ctx_iodevices 				ip [host="localhost" port=8001]
-//Context ctx_cargoservice 			ip [host="192.168.1.189" port=8000] // contesto remoto
+Context ctx_cargoservice 			ip [host="127.0.0.1" port=8000] // contesto remoto
 
 
 
-//QActor sonarsimul  context ctx_iodevices{
-//	State s0 initial{
-//		println("$name | start")
-//	}
-//	Goto work
-//
-//	State work{
-//		delay 1000 // attendo che sonarlistener entri in attesa
-//		
-//		// misurazioni non consistenti
-//		emitlocalstream measurement      : measurement(30)
-//	    delay 1000
-//		emitlocalstream measurement      : measurement(15)
-//	    delay 1000
-//		emitlocalstream measurement      : measurement(10)
-//	    delay 1000
-//		emitlocalstream measurement      : measurement(0)
-//	    delay 1000
-//		emitlocalstream measurement      : measurement(40)
-//		
-//		// assente per 4 secondi
-//		emitlocalstream measurement      : measurement(20)
-//	    delay 1000
-//	    emitlocalstream measurement      : measurement(20)
-//	    delay 1000
-//	    emitlocalstream measurement      : measurement(20)
-//	    delay 1000
-//	    emitlocalstream measurement      : measurement(20)
-//	    delay 1000
-//	    
-//		// presente per 3 secondi
-//		emitlocalstream measurement      : measurement(10)
-//	    delay 1000
-//	    emitlocalstream measurement      : measurement(10)
-//	    delay 1000
-//	    emitlocalstream measurement      : measurement(10)
-//	    delay 1000
-//	    
-//	    // di nuovo presente per 3 secondi
-//	    emitlocalstream measurement      : measurement(10)
-//	    delay 1000
-//	    emitlocalstream measurement      : measurement(10)
-//	    delay 1000
-//	    emitlocalstream measurement      : measurement(10)
-//	    delay 1000
-//	     
-//	    // guasto per 5 secondi
-//	    emitlocalstream measurement      : measurement(31)
-//	    delay 1000
-//	    emitlocalstream measurement      : measurement(31)
-//	    delay 1000
-//	    emitlocalstream measurement      : measurement(31)
-//	    delay 1000
-//	    emitlocalstream measurement      : measurement(31)
-//	    delay 1000
-//	    emitlocalstream measurement      : measurement(31)
-//	    delay 1000
-//	    
-//	    // di nuovo presente per 2 secondi, assente per 3
-//	    emitlocalstream measurement      : measurement(10)
-//	    delay 1000
-//	    emitlocalstream measurement      : measurement(10)
-//	    delay 1000
-//	    emitlocalstream measurement      : measurement(20)
-//	    delay 1000
-//	    emitlocalstream measurement      : measurement(20)
-//	    delay 1000
-//	    emitlocalstream measurement      : measurement(20)
-//	    delay 1000
-//	}
-//}
+QActor sonarsimul  context ctx_iodevices{
+	State s0 initial{
+		println("$name | start")
+	}
+	Goto work
+
+	State work{
+		delay 1000 // attendo che sonarlistener entri in attesa
+		
+		// misurazioni non consistenti
+		emitlocalstream measurement      : measurement(30)
+	    delay 1000
+		emitlocalstream measurement      : measurement(15)
+	    delay 1000
+		emitlocalstream measurement      : measurement(10)
+	    delay 1000
+		emitlocalstream measurement      : measurement(0)
+	    delay 1000
+		emitlocalstream measurement      : measurement(40)
+		
+		// assente per 4 secondi
+		emitlocalstream measurement      : measurement(20)
+	    delay 1000
+	    emitlocalstream measurement      : measurement(20)
+	    delay 1000
+	    emitlocalstream measurement      : measurement(20)
+	    delay 1000
+	    emitlocalstream measurement      : measurement(20)
+	    delay 1000
+	    
+		// presente per 3 secondi
+		emitlocalstream measurement      : measurement(10)
+	    delay 1000
+	    emitlocalstream measurement      : measurement(10)
+	    delay 1000
+	    emitlocalstream measurement      : measurement(10)
+	    delay 1000
+	    
+	    // di nuovo presente per 3 secondi
+	    emitlocalstream measurement      : measurement(10)
+	    delay 1000
+	    emitlocalstream measurement      : measurement(10)
+	    delay 1000
+	    emitlocalstream measurement      : measurement(10)
+	    delay 1000
+	   
+	     
+	    // guasto per 5 secondi
+	    emitlocalstream measurement      : measurement(31)
+	    delay 1000
+	    emitlocalstream measurement      : measurement(31)
+	    delay 1000
+	    emitlocalstream measurement      : measurement(31)
+	    delay 1000
+	    emitlocalstream measurement      : measurement(31)
+	    delay 1000
+	    emitlocalstream measurement      : measurement(31)
+	    delay 1000
+	    
+	    // di nuovo presente per 2 secondi, assente per 3
+	    emitlocalstream measurement      : measurement(10)
+	    delay 1000
+	    emitlocalstream measurement      : measurement(10)
+	    delay 1000
+	    emitlocalstream measurement      : measurement(20)
+	    delay 1000
+	    emitlocalstream measurement      : measurement(20)
+	    delay 1000
+	    emitlocalstream measurement      : measurement(20)
+	    delay 1000
+	    
+	    
+	}
+}
  
 
 
@@ -152,7 +155,7 @@ QActor measure_processor context ctx_iodevices {
 		println("$name | start") 
 	 	
 //	 	subscribeTo sonardevice for measurement
-//	 	subscribeTo sonarsimul  for measurement
+	 	subscribeTo sonarsimul  for measurement
 	}
 	Goto listen_for_measurement
 	

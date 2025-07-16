@@ -9,6 +9,8 @@ reply( getProductAnswer, product(JSonString) ).  %%for getProduct
 request( reserve_slot, reserve_slot(WEIGHT) ). %richiesta verso hold per prenotare uno slot. Contiene il peso del prodotto da caricare
 reply( reserve_slot_success, reserve_slot_success(SLOT) ). %%for reserve_slot | se la richiesta è soddisfacibile, hold restituisce il nome/id dello slot prenotato
 reply( reserve_slot_fail, reserve_slot_fail(CAUSA) ). %%for reserve_slot | fallisce se il peso supera MaxLoad oppure se non c'è uno slot libero
+request( get_hold_state, get_hold_state(X) ).
+event( hold_update, hold_update(JSonString) ).
 request( handle_load_operation, handle_load_operation(SLOT) ). %richiesta verso cargorobot per l'intervento di carico
 reply( load_operation_complete, load_operation_complete(OK) ). %%for handle_load_operation | l'intervento di carico non può fallire quindi prevediamo solo una risposta
 event( container_arrived, container_arrived(X) ). %evento che avvisa della presenza di un container presso l'IO-port
@@ -57,7 +59,7 @@ context(ctx_productservice, "cargoserviceqak",  "TCP", "8111").
  static(cargoservice).
   qactor( cargorobot, ctx_cargoservice, "it.unibo.cargorobot.Cargorobot").
  static(cargorobot).
-  qactor( hold_mock, ctx_cargoservice, "it.unibo.hold_mock.Hold_mock").
- static(hold_mock).
+  qactor( hold, ctx_cargoservice, "it.unibo.hold.Hold").
+ static(hold).
   qactor( external_client, ctx_cargoservice, "it.unibo.external_client.External_client").
  static(external_client).

@@ -461,6 +461,24 @@ QActor sonar_listener context ctx_iodevices {
 
 ### Hold
 
+## Analisi del problema | Hold
+L'attore _hold_ è responsabile di effettuare dinamicamente la prenotazione degli slot di carico nella stiva, garantendo che la capacità massima della nave MaxLoad non venga superata.  
+
+Il tipico ciclo di attività di _hold_ è il seguente:
+1. _hold_ riceve da _cargoservice_ una richiesta di prenotazione di uno slot.
+2. _hold_ ha il compito di tenere traccia della disponibilità degli slot liberi e del carico cumulativo e in base a ciò valutare la possibilità di effettuare l'intervento di carico. In questo caso vi sono 3 possibilità:
+	- Se il carico cumulativo (peso del nuovo container + carico attuale della nave) supera il MaxLoad della nave non è possibile caricare il container. In tal caso risponde al _cargoservice_ con **reserve_slot_fail**
+	- Se il carico cumulativo non supera il MaxLoad e non sono presenti slot liberi, anche in questo caso non è possibile caricare il container. In tal caso risponde al _cargoservice_ con **reserve_slot_fail** 
+	- Se Il carico cumulativo non supera il MaxLoad e vi è almeno uno slot libero è possibile procedere con il carico della nave. La risposta al _cargoservice_ sarà **reserve_slot_success_**
+
+### Considerazioni
+Il ciclo di attività dell'attore _hold_ è divisibile in due fasi:
+- fase di ricezione : Attesa passiva di messaggi (reserve_slot)
+- fase di elaborazione : validazione delle richieste e aggiornamento dello stato interno
+
+La fase di scarico non è compito nostro.
+
+Lo stao hold verrà osservato dalla gui , in qualsiasi momento la gui si può attivare ,
 
 
 ## Progettazione

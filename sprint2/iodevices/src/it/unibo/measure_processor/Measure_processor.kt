@@ -42,6 +42,7 @@ class Measure_processor ( name: String, scope: CoroutineScope, isconfined: Boole
 				state("s0") { //this:State
 					action { //it:State
 						CommUtils.outblack("$name | start")
+						subscribeToLocalActor("sonarsimul") 
 						//genTimer( actor, state )
 					}
 					//After Lenzi Aug2002

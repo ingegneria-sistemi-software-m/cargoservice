@@ -8,7 +8,10 @@ event( interrompi_tutto, interrompi_tutto(X) ). %evento che avvisa di un malfunz
 event( riprendi_tutto, riprendi_tutto(X) ). %evento che avvisa del ripristino del sonar e che quindi permette di continuare tutte le attività
 %====================================================================================
 context(ctx_iodevices, "localhost",  "TCP", "8001").
- qactor( measure_processor, ctx_iodevices, "it.unibo.measure_processor.Measure_processor").
+context(ctx_cargoservice, "127.0.0.1",  "TCP", "8000").
+ qactor( sonarsimul, ctx_iodevices, "it.unibo.sonarsimul.Sonarsimul").
+ static(sonarsimul).
+  qactor( measure_processor, ctx_iodevices, "it.unibo.measure_processor.Measure_processor").
  static(measure_processor).
   qactor( sonar_listener, ctx_iodevices, "it.unibo.sonar_listener.Sonar_listener").
  static(sonar_listener).

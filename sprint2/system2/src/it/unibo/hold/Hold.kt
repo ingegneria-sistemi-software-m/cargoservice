@@ -29,14 +29,72 @@ class Hold ( name: String, scope: CoroutineScope, isconfined: Boolean=false, isd
 	override fun getBody() : (ActorBasicFsm.() -> Unit){
 		//val interruptedStateTransitions = mutableListOf<Transition>()
 		//IF actor.withobj !== null val actor.withobj.name» = actor.withobj.method»ENDIF
+		 
+				var MaxLoad = 500
+				var currentLoad = 0
+				val slots = hashMapOf(
+					"slot1" to true, //
+					"slot2" to true,
+					"slot3" to true,
+					"slot4" to true
+				)
 		return { //this:ActionBasciFsm
 				state("s0") { //this:State
 					action { //it:State
+						CommUtils.outyellow("$name | STARTS - MaxLoad: $MaxLoad kg, Slots: $slots")
 						//genTimer( actor, state )
 					}
 					//After Lenzi Aug2002
 					sysaction { //it:State
 					}	 	 
+					 transition( edgeName="goto",targetState="wait_request", cond=doswitch() )
+				}	 
+				state("wait_request") { //this:State
+					action { //it:State
+						CommUtils.outyellow("$name | waiting for reservation requests")
+						//genTimer( actor, state )
+					}
+					//After Lenzi Aug2002
+					sysaction { //it:State
+					}	 	 
+					 transition(edgeName="t052",targetState="check_reservation",cond=whenRequest("reserve_slot"))
+				}	 
+				state("check_reservation") { //this:State
+					action { //it:State
+						if( checkMsgContent( Term.createTerm("reserve_slot(WEIGHT)"), Term.createTerm("reserve_slot(WEIGHT)"), 
+						                        currentMsg.msgContent()) ) { //set msgArgList
+								
+												val weight = payloadArg(0).toInt()
+												var FreeSlot: String ?= null
+												var Cause = "" 
+								
+												if (currentLoad + weight > MaxLoad){
+													Cause= "Adding weight $weight exceeds MaxLoad $MaxLoad"
+												
+												}else{
+													FreeSlot = slots.entries.find {it.value}?.key
+													if (FreeSlot == null){
+														Cause = "All slots are occupied"
+													}
+												}
+								if(  FreeSlot != null  
+								 ){CommUtils.outgreen("$name | reserving $FreeSlot for weight $weight")
+								 
+													slots[FreeSlot]=false
+													currentLoad +=weight
+								answer("reserve_slot", "reserve_slot_success", "reserve_slot_success($FreeSlot)"   )  
+								}
+								else
+								 {CommUtils.outred("$name | reservation refused: $Cause")
+								 answer("reserve_slot", "reserve_slot_fail", "reserve_slot_fail($Cause)"   )  
+								 }
+						}
+						//genTimer( actor, state )
+					}
+					//After Lenzi Aug2002
+					sysaction { //it:State
+					}	 	 
+					 transition( edgeName="goto",targetState="wait_request", cond=doswitch() )
 				}	 
 			}
 		}

@@ -26,9 +26,10 @@ with Diagram('iodevicesArch', show=False, outformat='png', graph_attr=graphattr)
      sys = Custom('','./qakicons/system.png')
 ### see https://renenyffenegger.ch/notes/tools/Graphviz/attributes/label/HTML-like/index
      with Cluster('ctx_iodevices', graph_attr=nodeattr):
+          sonarsimul=Custom('sonarsimul','./qakicons/symActorWithobjSmall.png')
           measure_processor=Custom('measure_processor','./qakicons/symActorWithobjSmall.png')
           sonar_listener=Custom('sonar_listener','./qakicons/symActorWithobjSmall.png')
-     sys >> Edge( label='measurement', **evattr, decorate='true', fontcolor='darkgreen') >> measure_processor
+     sonarsimul >> Edge( label='measurement', **eventedgeattr, decorate='true', fontcolor='red') >> measure_processor
      measure_processor >> Edge( label='riprendi_tutto', **eventedgeattr, decorate='true', fontcolor='red') >> sys
      measure_processor >> Edge( label='container_arrived', **eventedgeattr, decorate='true', fontcolor='red') >> sys
      measure_processor >> Edge( label='container_absent', **eventedgeattr, decorate='true', fontcolor='red') >> sys
