@@ -40,19 +40,17 @@ class Hold ( name: String, scope: CoroutineScope, isconfined: Boolean=false, isd
 				)
 		
 			
-			fun getHoldStateJson(): String {
-		    
-		    val slotsJson = slots.map { (key, value) ->
-		        "\"$key\": \"${if (value) "free" else "occupied"}\""
-		    }.joinToString(", ")
-		
-		    val rawJson = """{"currentLoad":$currentLoad,"slots":{$slotsJson}}"""
-		
-		//  println("DEBUG raw JSON: $rawJson")
-		
-		    return "'${rawJson.replace("'", "\\'")}'"
-		    
-		    }
+				fun getHoldStateJson(): String {
+				    val slotsJson = slots.map{ (key, value) ->
+				        "\"$key\": \"${if (value) "free" else "occupied"}\""
+				    }.joinToString(", ")
+				
+				    val rawJson = """{"currentLoad":$currentLoad,"slots":{$slotsJson}}"""
+				
+				 	// println("DEBUG raw JSON: $rawJson")
+				
+				    return "'${rawJson.replace("'", "\\'")}'"
+			    }
 		return { //this:ActionBasciFsm
 				state("s0") { //this:State
 					action { //it:State
@@ -88,7 +86,12 @@ class Hold ( name: String, scope: CoroutineScope, isconfined: Boolean=false, isd
 													Cause= "Exceeds MaxLoad"
 												
 												}else{
-													FreeSlot = slots.entries.find {it.value}?.key // restituisce la chiave del  primo elemento della entry con valore true oppure restituisce null
+													// .find{it.value} è un iteratore Kotlin che restituisce la prima entry
+													// nella struttura dati tale per cui l'espressione tra graffe risulti 'true'
+													//
+													// it è la entry corrente all'interno della struttura dati,
+													// nel nostro caso ha un campo value in quanto è l'entry di una mappa
+													FreeSlot = slots.entries.find{it.value}?.key
 													if (FreeSlot == null){
 														Cause = "All slots are occupied"
 													}
@@ -96,8 +99,8 @@ class Hold ( name: String, scope: CoroutineScope, isconfined: Boolean=false, isd
 								if(  FreeSlot != null  
 								 ){CommUtils.outgreen("$name | reserving $FreeSlot for weight $weight")
 								 
-													slots[FreeSlot]=false
-													currentLoad +=weight
+													slots[FreeSlot] = false
+													currentLoad += weight
 													val JsonState = getHoldStateJson()
 								            		
 								emit("hold_update", "hold_update($JsonState)" ) 
@@ -122,7 +125,7 @@ class Hold ( name: String, scope: CoroutineScope, isconfined: Boolean=false, isd
 								
 												val JsonState = getHoldStateJson()
 								CommUtils.outyellow("$name | sending hold state")
-								CommUtils.outred("$name | DEBUG wrapped   = $JsonState")
+								CommUtils.outred("$name | DEBUG wrapped = $JsonState")
 								answer("get_hold_state", "hold_state", "hold_state($JsonState)"   )  
 						}
 						//genTimer( actor, state )

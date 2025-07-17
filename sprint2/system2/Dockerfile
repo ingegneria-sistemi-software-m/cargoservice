@@ -5,7 +5,7 @@
 FROM eclipse-temurin:17.0.5_8-jre-focal as builder
 ## EXPOSE 8020
 ## ADD extracts the tar
-ADD ./build/distributions/arch1-2.0.tar /
+ADD ./build/distributions/arch2-1.0.tar /
 WORKDIR /arch2-1.0/bin
 COPY ./*.pl ./
 COPY ./*.json ./
