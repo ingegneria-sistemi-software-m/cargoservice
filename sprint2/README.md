@@ -466,10 +466,10 @@ L'attore _hold_ è responsabile di effettuare dinamicamente la prenotazione degl
 
 Il tipico ciclo di attività di _hold_ è il seguente:
 1. _hold_ riceve da _cargoservice_ una richiesta di prenotazione di uno slot.
-2. _hold_ ha il compito di tenere traccia della disponibilità degli slot liberi e del carico cumulativo e in base a ciò valutare la possibilità di effettuare l'intervento di carico. Le casistiche previste sono le seguenti:
-	- Se il carico cumulativo (peso del nuovo container + carico attuale della nave) supera il MaxLoad della nave non è possibile caricare il container. In tal caso risponde al _cargoservice_ con **reserve_slot_fail**
-	- Se il carico cumulativo non supera il MaxLoad e non sono presenti slot liberi, anche in questo caso non è possibile caricare il container. In tal caso risponde al _cargoservice_ con **reserve_slot_fail** 
-	- Se Il carico cumulativo non supera il MaxLoad e vi è almeno uno slot libero è possibile procedere con il carico della nave. La risposta al _cargoservice_ sarà **reserve_slot_success_**
+2. _hold_ ha il compito di tenere traccia della disponibilità degli slot liberi e del carico cumulativo, in base a ciò valuta la possibilità di effettuare l'intervento di carico. Le casistiche previste sono le seguenti:
+	- Se il carico cumulativo (peso del nuovo container + carico attuale nel deposito) supera MaxLoad, non è possibile caricare il container. In tal caso _hold_ risponde a _cargoservice_ con **reserve_slot_fail**
+	- Se il carico cumulativo non supera MaxLoad e non sono presenti slot liberi, anche in questo caso non è possibile caricare il container. In tal caso _hold_ risponde al _cargoservice_ con **reserve_slot_fail** 
+	- Se Il carico cumulativo non supera MaxLoad e vi è almeno uno slot libero è possibile procedere con l'intervento di carico. La risposta al _cargoservice_ sarà **reserve_slot_success_**
 
 ### Considerazioni
 Il ciclo di attività dell'attore _hold_ è divisibile in due fasi:
@@ -478,13 +478,13 @@ Il ciclo di attività dell'attore _hold_ è divisibile in due fasi:
 
 Si vuole sottolineare in questa parte che si è evinto dall'analisi dei requisiti che non è necessario implementare la casistica in cui gli slot di _hold_ si liberino.
 
-In questa fase si è anche svolto una valutazione relativa al legame tra _hold_ e la componente web-GUI data la necessità futura di stabilire una comunicazione tra le due componenti. In particolare, si è ipotizzato che la web-GUI debba osservare in tempo reale lo stato della stiva. Per questo motivo, è stata prevista un'estensione del comportamento dell'attore _hold_:
- 1. Inizializzazione dello stato: trasmissione dello stato iniziale di _hold_ alla GUI
- 2. Aggiornamento in tempo reale : emissione di eventi da parte di _hold_ che notificano alla GUI cambiamenti dello stato interno.
+In questa fase si è anche svolto una valutazione relativa al legame tra _hold_ e la componente _web-GUI_. Dall'analisi dei requisiti è risultato chiaro che questi due componenti devono interagire.In particolare, la web-gui deve recuperare lo stato mantenuto da _hold_ e ricevere da quest'ultimo aggiornamenti periodici. Per questo motivo, il comportamento dell'attore _hold_ è anche in grado di:
+1. Rispondere a query riguardanti il suo stato
+2. Emettere eventi di aggiornamento quando il suo stato subisce una modifica
+
+
 
 ### Messaggi
-
-
 ```
 Request reserve_slot         : reserve_slot(WEIGHT) 			    	   "richiesta verso hold per prenotare uno slot. Contiene il peso del prodotto da caricare"
 Reply   reserve_slot_success : reserve_slot_success(SLOT) for reserve_slot "se la richiesta è soddisfacibile, hold restituisce il nome/id dello slot prenotato"
@@ -494,8 +494,8 @@ Request get_hold_state		 : get_hold_state(X)						   "richiesta verso hold per c
 Reply   hold_state			 : hold_state(JSonString)					   "risposta verso gui da parte di hold con le informazioni interne del deposito"
 
 Event	hold_update			 : hold_update(JSonString)					   "evento che avvisa di un cambiamento nello stato interno di hold"
-
 ```
+
 
 ### Modello Hold
 
@@ -513,21 +513,18 @@ QActor hold context ctx_cargoservice{
 			"slot3" to true,
 			"slot4" to true
 		)
-
 	
-	fun getHoldStateJson(): String {
-    
-    val slotsJson = slots.map { (key, value) ->
-        "\"$key\": \"${if (value) "free" else "occupied"}\""
-    }.joinToString(", ")
+		fun getHoldStateJson(): String {
+				val slotsJson = slots.map { (key, value) ->
+				"\"$key\": \"${if (value) "free" else "occupied"}\""
+			}.joinToString(", ")
 
-    val rawJson = """{"currentLoad":$currentLoad,"slots":{$slotsJson}}"""
+			val rawJson = """{"currentLoad":$currentLoad,"slots":{$slotsJson}}"""
 
-//  println("DEBUG raw JSON: $rawJson")
+			// println("DEBUG raw JSON: $rawJson")
 
-    return "'${rawJson.replace("'", "\\'")}'"
-    
-    }
+			return "'${rawJson.replace("'", "\\'")}'"    
+		}
 	#]
 	
 	
