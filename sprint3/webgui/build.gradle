@@ -132,6 +132,7 @@ eclipse {
 application {
     //Define the main class for the application.
     mainClassName    = 'TODO'
+    //it.unibo.ctx_webgui.MainCtx_webgui.kt
 }
  
  jar {
