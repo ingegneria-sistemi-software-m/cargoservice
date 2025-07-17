@@ -68,10 +68,11 @@ Di seguito la tipica sequenza di attività di cargoservice:
 
 Le attività che cargoservice deve effettuare non pongono particolari problemi da analizzare, si tratta solo di effettuare una serie di richieste. Tuttavia, è stata presa una decisione: quella di **rendere il cargorobot "intelligente"**.
 
-Si sarebbe potuto rendere il cargorobot un mero esecutore di comandi, aggiungendo a cargoservice la responsabilità di dettare la sua posizione e che cosa deve fare in ogni momento. Si è preferito, invece, rendere il cargorobot più intelligente e indipendente per tre motivi principali.   
-1. L'analisi del dominio effettuata nello sprint 0 ha delineato il cargorobot come un componente con delle mosse più sofisticate
+Si sarebbe potuto rendere il cargorobot un mero esecutore di comandi, aggiungendo a cargoservice la responsabilità di dettare la sua posizione e che cosa deve fare in ogni momento. Tuttavia, dai requisiti e dall'analisi del dominio è emerso che il cargorobot è un componente più sofisticato, che ci si aspetta possa completare un intervento di carico senza essere istruito ad ogni passaggio.
+
+Rendere il cargorobot un componente intelligente porta anche ai seguenti vantaggi:
 1. Cargoservice giova di un cargorobot con delle mosse più sofisticate in quanto queste producono un abstraction gap minore.
-1. Principio di singola responsabilità: cargoservice si occupa di fare solo da orchestrare mentre cargorobot si occupa di effettuare le azioni del DDR descritto nei requisiti. 
+2. Principio di singola responsabilità: cargoservice si occupa di fare solo da orchestrare mentre cargorobot si occupa di effettuare le azioni del DDR descritto nei requisiti. 
 
 #### Nuovi Messaggi
 
@@ -698,11 +699,9 @@ L'analisi del componente _cargoservice_ ha portato a definire il seguente nuovo 
     }
 ```
 
-Per quanto riguarda il cargorobot, **risulta difficile pensare a dei testi unitiari automatici per collaudare il suo funzionamento**.
-
 Per quanto riguarda il cargorobot, **risulta difficile automatizzare i testi unitiari**, ma è comunque **possibile collaudare il suo funzionamento**.  
 Idealmente, vorremmo accedere alle variabili dell WEnv ma possiamo accontentarci di visualizzare il movimento, senza automatizzare nulla.
-Come alternativa, si è quindi pensato di osservare il suo comportamento in presenza degli attori mock: **external\client\mock**, **hold\mock** e **sonar\mock** che simulano gli eventi improvvisi a cui cargorobot è sensibile. 
+Come alternativa, si è quindi pensato di osservare il suo comportamento in presenza degli attori mock: **external_client_mock**, **hold_mock** e **sonar_mock** che simulano gli eventi improvvisi a cui cargorobot è sensibile. 
 
 Dopo svariate prove, e configurazioni diverse degli attori mock, si è raggiunta una confidenza soddisfacente del corretto funzionamento di cargorobot. 
 
@@ -805,6 +804,17 @@ QActor external_client context ctx_cargoservice{
   	}
 }
 ```
+
+
+#### nota | automatizabilità dei test di cargorobot
+In seguito al confronto con un analista senior, è emerso che sarebbe possibile automatizzare i test di cargorobot se si adottasse come "Source of Truth" lo stato che il _basicrobot_ mantiene di se. Questo permetterebbe, ad esempio, di recuperare la posizione che il cargorobot **pensa di avere** in seguito ad una richiesta di spostamento. 
+
+Tuttavia, vi è un problema: lo stato che il basicrobot mantiene non è detto che combaci con lo stato effettivo del DDR. Ci potrebbe essere infatti uno sfalsamento tra i due causato da collisioni non previste, messaggi persi, guasti nei motori del DDR, ecc. 
+
+Per questo motivo, si continua a preferire il testing non automatico descritto precedentemente. 
+
+
+
 
 ## Progettazione
 
@@ -913,3 +923,9 @@ Nel far questo si sono anche definite le interfaccie per i componenti hold e son
 L'architettura del sistema risultante da questo sprint è la seguente.
 
 ![arch1](./arch1.png)
+
+
+
+
+### Tempo impiegato e ripartizione del lavoro
+...

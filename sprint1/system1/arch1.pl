@@ -60,5 +60,3 @@ context(ctx_productservice, "cargoserviceqak",  "TCP", "8111").
  static(hold_mock).
   qactor( sonar_mock, ctx_cargoservice, "it.unibo.sonar_mock.Sonar_mock").
  static(sonar_mock).
-  qactor( external_client, ctx_cargoservice, "it.unibo.external_client.External_client").
- static(external_client).

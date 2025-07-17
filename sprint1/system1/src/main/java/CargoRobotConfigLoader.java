@@ -38,7 +38,7 @@ public class CargoRobotConfigLoader {
         	String currentDir = System.getProperty("user.dir");
             System.out.println("Directory corrente: " + currentDir);
             
-            CargoRobotConfigLoader config = CargoRobotConfigLoader.loadFromFile("./src/main/resources/cargorobot_conf.json");
+            CargoRobotConfigLoader config = CargoRobotConfigLoader.loadFromFile("./cargorobot_conf.json");
 
             System.out.println("Step_len: " + config.getStepLen());
 

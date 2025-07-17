@@ -239,7 +239,8 @@ QActor cargorobot context ctx_cargoservice{
 import "main.java.*"
 	[#
 		// stato
-		val config = CargoRobotConfigLoader.loadFromFile("./src/main/resources/cargorobot_conf.json");
+		val config_file_path = "./cargorobot_conf.json"
+		val config = CargoRobotConfigLoader.loadFromFile(config_file_path);
 		
 		val Step_len = config.getStepLen()
 		
@@ -735,59 +736,59 @@ QActor sonar_mock context ctx_cargoservice{
  
  
 
-QActor external_client context ctx_cargoservice{
- 	State s0 initial {
- 		println("$name | STARTS") color cyan
-  	} 
-  	// commenta entrambi quando vuoi mandare richieste con i test
-  	Goto work0
-//  	Goto work1 
-  	
-  	
-  	// cliente che mi manda 4 richieste una dietro l'altra
-  	State work0 {
- 		println("$name | sends requests") color cyan
- 		request cargoservice -m load_product: load_product(17)
- 		request cargoservice -m load_product: load_product(17)
- 		request cargoservice -m load_product: load_product(17)
- 		request cargoservice -m load_product: load_product(17)
- 		delay 2000
-  	} 
-  	
-  	// client mock che manda 4 richieste spaziate
-  	State work1 {
- 		println("$name | sends request") color cyan
- 		request cargoservice -m load_product: load_product(17)
- 		delay 2000
-  	} 
-  	Transition t0
-	   whenReply load_accepted -> work2
-	   whenReply load_refused  -> work2
-	   
-	   
-	State work2 {
- 		println("$name | sends request") color cyan
- 		request cargoservice -m load_product: load_product(10)
- 		delay 2000
-  	} 
-  	Transition t0
-	   whenReply load_accepted -> work3
-	   whenReply load_refused  -> work3
-	   
-	
-	State work3 {
- 		println("$name | sends request") color cyan
- 		request cargoservice -m load_product: load_product(17)
- 		delay 2000
-  	} 
-  	Transition t0
-	   whenReply load_accepted -> work4
-	   whenReply load_refused  -> work4
-	   
-	
-	State work4 {
- 		println("$name | sends request") color cyan
- 		request cargoservice -m load_product: load_product(17)
- 		delay 2000
-  	} 
-}
+//QActor external_client context ctx_cargoservice{
+// 	State s0 initial {
+// 		println("$name | STARTS") color cyan
+//  	} 
+//  	// commenta entrambi quando vuoi mandare richieste con i test
+//  	Goto work0
+////  	Goto work1 
+//  	
+//  	
+//  	// cliente che mi manda 4 richieste una dietro l'altra
+//  	State work0 {
+// 		println("$name | sends requests") color cyan
+// 		request cargoservice -m load_product: load_product(17)
+// 		request cargoservice -m load_product: load_product(17)
+// 		request cargoservice -m load_product: load_product(17)
+// 		request cargoservice -m load_product: load_product(17)
+// 		delay 2000
+//  	} 
+//  	
+//  	// client mock che manda 4 richieste spaziate
+//  	State work1 {
+// 		println("$name | sends request") color cyan
+// 		request cargoservice -m load_product: load_product(17)
+// 		delay 2000
+//  	} 
+//  	Transition t0
+//	   whenReply load_accepted -> work2
+//	   whenReply load_refused  -> work2
+//	   
+//	   
+//	State work2 {
+// 		println("$name | sends request") color cyan
+// 		request cargoservice -m load_product: load_product(10)
+// 		delay 2000
+//  	} 
+//  	Transition t0
+//	   whenReply load_accepted -> work3
+//	   whenReply load_refused  -> work3
+//	   
+//	
+//	State work3 {
+// 		println("$name | sends request") color cyan
+// 		request cargoservice -m load_product: load_product(17)
+// 		delay 2000
+//  	} 
+//  	Transition t0
+//	   whenReply load_accepted -> work4
+//	   whenReply load_refused  -> work4
+//	   
+//	
+//	State work4 {
+// 		println("$name | sends request") color cyan
+// 		request cargoservice -m load_product: load_product(17)
+// 		delay 2000
+//  	} 
+//}
