@@ -1,0 +1,334 @@
+System iodevices
+
+Event measurement 		: measurement(CM) 	   "le misurazioni sono in CM e sono sempre > 0"
+Event container_arrived : container_arrived(X) "evento che avvisa della presenza di un container presso l'IO-port"
+Event container_absent  : container_absent(X)  "evento che avvisa dell'assenza di un container presso l'IO-port"
+Event interrompi_tutto  : interrompi_tutto(X)  "evento che avvisa di un malfunzionamento del sonar e che quindi costringe a interrompre tutte le attività"
+Event riprendi_tutto    : riprendi_tutto(X)    "evento che avvisa del ripristino del sonar e che quindi permette di continuare tutte le attività"
+
+
+Context ctx_iodevices 				ip [host="localhost" port=8001]
+Context ctx_cargoservice 			ip [host="127.0.0.1" port=8000] // contesto remoto
+
+
+
+QActor sonarsimul  context ctx_iodevices{
+	State s0 initial{
+		println("$name | start")
+	}
+	Goto work
+
+	State work{
+		delay 1000 // attendo che sonarlistener entri in attesa
+		
+		// misurazioni non consistenti
+		emitlocalstream measurement      : measurement(30)
+	    delay 1000
+		emitlocalstream measurement      : measurement(15)
+	    delay 1000
+		emitlocalstream measurement      : measurement(10)
+	    delay 1000
+		emitlocalstream measurement      : measurement(0)
+	    delay 1000
+		emitlocalstream measurement      : measurement(40)
+		
+		// assente per 4 secondi
+		emitlocalstream measurement      : measurement(20)
+	    delay 1000
+	    emitlocalstream measurement      : measurement(20)
+	    delay 1000
+	    emitlocalstream measurement      : measurement(20)
+	    delay 1000
+	    emitlocalstream measurement      : measurement(20)
+	    delay 1000
+	    
+		// presente per 3 secondi
+		emitlocalstream measurement      : measurement(10)
+	    delay 1000
+	    emitlocalstream measurement      : measurement(10)
+	    delay 1000
+	    emitlocalstream measurement      : measurement(10)
+	    delay 1000
+	    
+	    // di nuovo presente per 3 secondi
+	    emitlocalstream measurement      : measurement(10)
+	    delay 1000
+	    emitlocalstream measurement      : measurement(10)
+	    delay 1000
+	    emitlocalstream measurement      : measurement(10)
+	    delay 1000
+	   
+	     
+	    // guasto per 5 secondi
+	    emitlocalstream measurement      : measurement(31)
+	    delay 1000
+	    emitlocalstream measurement      : measurement(31)
+	    delay 1000
+	    emitlocalstream measurement      : measurement(31)
+	    delay 1000
+	    emitlocalstream measurement      : measurement(31)
+	    delay 1000
+	    emitlocalstream measurement      : measurement(31)
+	    delay 1000
+	    
+	    // di nuovo presente per 2 secondi, assente per 3
+	    emitlocalstream measurement      : measurement(10)
+	    delay 1000
+	    emitlocalstream measurement      : measurement(10)
+	    delay 1000
+	    emitlocalstream measurement      : measurement(20)
+	    delay 1000
+	    emitlocalstream measurement      : measurement(20)
+	    delay 1000
+	    emitlocalstream measurement      : measurement(20)
+	    delay 1000
+	    
+	    
+	}
+}
+ 
+
+
+
+//QActor sonardevice context ctx_iodevices {
+//	[# 
+//		lateinit var reader : java.io.BufferedReader
+//	    lateinit var p : Process	
+//	    var Distance = 0
+//	#]	
+//	
+//	State s0 initial{
+//		println("$name | start") 
+//	 	[#
+//			p       = Runtime.getRuntime().exec("python sonar.py")
+//			reader  = java.io.BufferedReader( java.io.InputStreamReader(p.getInputStream()) )	
+//		#]		
+//	}
+//	Goto readSonarData
+//	
+//	State readSonarData{
+//		[# 
+//			var data = reader.readLine()
+//			
+//			if( data != null ){
+//				try{ 
+//					val vd = data.toFloat()
+//					val v  = vd.toInt()
+//					
+//					// filter the data maybe?
+//					if(v <= 100)
+//						Distance = v				
+//					else 
+//						Distance = 0
+//				}catch(e: Exception){
+//					CommUtils.outred("$name readSonarDataERROR: $e")
+//				}
+//			}
+//			
+//		#]	
+//		
+//		if [# Distance > 0 #] { 
+//		    println("$name | misurato $data cm") color yellow
+//			emitlocalstream measurement : measurement($Distance)			 
+//		}
+//	}
+//	Goto readSonarData
+//}
+
+
+
+
+QActor measure_processor context ctx_iodevices {
+	import "main.java.IntervalliMisurazioni"
+
+	[# 
+		val DFREE = 30
+		var CurrentIntervallo = IntervalliMisurazioni.PRIMA_MISURAZIONE
+		var LastIntervallo = IntervalliMisurazioni.PRIMA_MISURAZIONE
+		// conta quanti misurazioni di fila sono cadute nello stesso intervallo
+		var CounterIntervallo = 1
+		// flag che mi dice se sono in uno stato di malfunzionamento
+		var Guasto = false
+	#]	
+	
+	State s0 initial{
+		println("$name | start") 
+	 	
+//	 	subscribeTo sonardevice for measurement
+	 	subscribeTo sonarsimul  for measurement
+	}
+	Goto listen_for_measurement
+	
+	
+	State listen_for_measurement {
+		//aspetto
+	}
+	Transition t0
+		whenEvent measurement -> process_measurement
+		
+		
+	State process_measurement {
+		onMsg(measurement : measurement(X)) {
+			[# 
+				val M = payloadArg(0).toInt()	
+				CounterIntervallo++
+			#]
+			
+			if [#  M < DFREE/2 #] { 
+				println("$name | container presente") color blue // DEBUG
+				[# CurrentIntervallo = IntervalliMisurazioni.CONTAINER_PRESENTE #]
+				if [# Guasto #] {
+					println("$name | sonar ripristinato") color green
+					[# Guasto = false #]
+					updateResource [# "ripristinato" #] 
+					emit riprendi_tutto : riprendi_tutto(si)
+				}
+			}
+			
+			if [# M >= DFREE/2 && M <= DFREE #] { 
+				println("$name | container assente") color blue // DEBUG
+				[# CurrentIntervallo = IntervalliMisurazioni.CONTAINER_ASSENTE #]
+				if [# Guasto #] {
+					println("$name | sonar ripristinato") color green
+					[# Guasto = false #]
+					updateResource [# "ripristinato" #] 
+					emit riprendi_tutto : riprendi_tutto(si)
+				}
+			}
+			
+			if [# M > DFREE #] { 
+				println("$name | guasto!!!") color blue // DEBUG
+				[# CurrentIntervallo = IntervalliMisurazioni.GUASTO #]
+			} 
+			
+			[#
+				if(CurrentIntervallo==LastIntervallo && LastIntervallo!=IntervalliMisurazioni.PRIMA_MISURAZIONE) {
+//					CommUtils.outyellow("consistenza: $CounterIntervallo") // DEBUG
+					
+					// switch di Kotlin
+					when(CurrentIntervallo) {
+					    IntervalliMisurazioni.CONTAINER_PRESENTE -> {
+					        if(CounterIntervallo == 3) {
+					        	CommUtils.outmagenta("Container presente consistentemente")
+        	#]
+        						updateResource [# "container_arrived" #] 
+								emit container_arrived : container_arrived(si)
+			[#
+					    		CounterIntervallo = 0
+					    	}
+					    }
+					    IntervalliMisurazioni.CONTAINER_ASSENTE -> {
+					    	if(CounterIntervallo == 3) {
+					        	CommUtils.outmagenta("Container assente consistentemente")
+        	#]
+        						updateResource [# "container_absent" #] 
+								emit container_absent : container_absent(si)
+			[#
+					    		CounterIntervallo = 0
+					    	}
+					    }
+					    IntervalliMisurazioni.GUASTO -> {
+					    	if(CounterIntervallo == 3) {
+								CommUtils.outred("Guasto consistente")	
+								Guasto = true
+			#]
+								updateResource [# "guasto" #] 
+								emit interrompi_tutto : interrompi_tutto(si)
+			[#
+								CounterIntervallo = 0			    		
+					    	}
+					    }
+					    else -> {
+					    	// ci vuole se no kotlin si lamenta in quanto
+					    	// i casi sopra non sono esausitivi
+					    }
+					}
+				} 
+				else {
+					// 1 in quanto questa è la prima misurazione appartenente al suo intervallo
+					CounterIntervallo = 1
+//					CommUtils.outyellow("consistenza: $CounterIntervallo") // DEBUG
+				}
+				
+				LastIntervallo = CurrentIntervallo
+			#]
+		}
+		
+		delay 20 // delay necessario altrimenti si perdono delle updateResource (l'infrastruttura QAK è misteriosa)
+	}
+	Goto listen_for_measurement
+}
+
+
+
+
+//QActor led context ctx_iodevices {
+//	State s0 initial{
+//	}
+//	Goto spento
+//	
+//	State spento {
+//		println("$name | sono spento") color red
+//		[# machineExec("python ledPython25Off.py") #]
+//	}
+//	Transition t0
+//		whenEvent interrompi_tutto -> acceso
+//	
+//	State acceso {
+//		println("$name | sono acceso") color green
+//		[# machineExec("python ledPython25On.py") #]
+//	}
+//	Transition t0
+//		whenEvent riprendi_tutto -> spento
+//}
+
+
+
+// cliente di prova
+QActor sonar_listener context ctx_iodevices {
+	State s0 initial{
+		println("$name | start") 
+	}
+	Goto work
+	
+	
+	State work {
+		println("$name | working") color blue
+		delay 1000
+	}
+	Transition t0
+		whenEvent container_arrived -> container_arrived
+		whenEvent container_absent -> container_absent
+		whenEvent interrompi_tutto -> bloccato
+		
+		
+	State container_arrived {
+		println("$name | container_arrived") color green
+		delay 1000
+	} 
+	Goto work
+	
+	
+	State container_absent {
+		println("$name | container_absent") color red
+		delay 1000
+	} 
+	Goto work
+	
+		
+	State bloccato {
+		println("$name | bloccato!") color red
+	}
+	Transition t0
+		whenEvent riprendi_tutto -> ripristinato
+		
+		
+	State ripristinato {
+		println("$name | ripristinato!") color green
+	}
+	Goto work
+}
+
+
+
+ 

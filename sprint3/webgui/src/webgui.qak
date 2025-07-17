@@ -1,0 +1,38 @@
+System webgui 
+
+Event hold_update : hold_update(JSonString)
+
+Context ctx_webgui ip [host="localhost" port=8050]
+Context ctx_cargoservice ip [host="127.0.0.1" port=8000]
+
+ExternalQActor hold context ctx_cargoservice
+
+QActor webgui context ctx_webgui {
+    [# 
+        var currentState = "{}"
+        
+        fun stateUpdate(json: String){
+            currentState = json
+            println("UPDATE RECEIVED: ${json.take(50)}...") 
+        }
+    #]
+    
+    State init initial {
+        println("$name | Starting in event listening mode") color blue
+    }
+    Goto listening
+
+    State listening {
+        println("$name | Ready to receive hold updates") color blue
+    }
+    Transition t0
+        whenEvent hold_update -> handle_update
+        
+    
+    State handle_update {
+        onMsg(hold_update : hold_update(JSonString)) {
+            [# stateUpdate(payloadArg(0)) #]   
+        }
+    }
+    Goto listening
+}

@@ -38,7 +38,6 @@ class External_client ( name: String, scope: CoroutineScope, isconfined: Boolean
 					//After Lenzi Aug2002
 					sysaction { //it:State
 					}	 	 
-					 transition( edgeName="goto",targetState="work0", cond=doswitch() )
 				}	 
 				state("work0") { //this:State
 					action { //it:State
