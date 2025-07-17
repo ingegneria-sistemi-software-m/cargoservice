@@ -607,6 +607,8 @@ QActor hold context ctx_cargoservice{
 ### Hold
 
 #### Scenario 1: Test prenotazione riuscita 
+blah blah blah
+
 
 #### Scenario 2: Test intervento di carico rifiutato per superamento di MaxLoad
 
