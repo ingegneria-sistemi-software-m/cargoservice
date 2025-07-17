@@ -32,7 +32,8 @@ class Cargorobot ( name: String, scope: CoroutineScope, isconfined: Boolean=fals
 		//IF actor.withobj !== null val actor.withobj.name» = actor.withobj.method»ENDIF
 		
 				// stato
-				val config = CargoRobotConfigLoader.loadFromFile("./src/main/resources/cargorobot_conf.json");
+				val file = "./cargorobot_conf.json"
+				val config = CargoRobotConfigLoader.loadFromFile(file);
 				
 				val Step_len = config.getStepLen()
 				

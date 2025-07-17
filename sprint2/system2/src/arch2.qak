@@ -158,7 +158,7 @@ QActor cargoservice context ctx_cargoservice {
 	
 	State get_weight_fail {
 		[# 
-			val Causa = "Non è stato possibile recuperare il peso di PID: $Cur_prod_PID in quanto non registrato dentro a productservice."
+			val Causa = "'Non è stato possibile recuperare il peso di PID: $Cur_prod_PID in quanto non registrato dentro a productservice.'"
 		#]
 		println("$name | $Causa") color red
 		
@@ -189,7 +189,7 @@ QActor cargoservice context ctx_cargoservice {
 		onMsg( reserve_slot_fail : reserve_slot_fail(CAUSA) ) {
 			[# 
 				val Causa = payloadArg(0) 
-				val CausaMsg = "Non è stato possibile prenotare uno slot per (PID: $Cur_prod_PID, KG: $Cur_prod_weight). \n\tCausa: $Causa"
+				val CausaMsg = "'Non è stato possibile prenotare uno slot per (PID: $Cur_prod_PID, KG: $Cur_prod_weight). \n\tCausa: $Causa'"
 			#]
 			println("$name | $CausaMsg") color red
 			
@@ -235,7 +235,6 @@ QActor cargoservice context ctx_cargoservice {
 
 
 
-
 /*********** CARGOROBOT ***********/
 
 
@@ -249,7 +248,8 @@ QActor cargorobot context ctx_cargoservice{
 import "main.java.*"
 	[#
 		// stato
-		val config = CargoRobotConfigLoader.loadFromFile("./src/main/resources/cargorobot_conf.json");
+		val file = "./cargorobot_conf.json"
+		val config = CargoRobotConfigLoader.loadFromFile(file);
 		
 		val Step_len = config.getStepLen()
 		
@@ -640,7 +640,7 @@ QActor hold context ctx_cargoservice{
 	[# 
 		var MaxLoad = 500
 		var currentLoad = 0
-		val slots = hashMapOf(
+		val slots = linkedMapOf(
 			"slot1" to true, 
 			"slot2" to true,
 			"slot3" to true,
@@ -655,7 +655,7 @@ QActor hold context ctx_cargoservice{
 		
 		    val rawJson = """{"currentLoad":$currentLoad,"slots":{$slotsJson}}"""
 		
-		 	// println("DEBUG raw JSON: $rawJson")
+		 	 println("DEBUG raw JSON: $rawJson")
 		
 		    return "'${rawJson.replace("'", "\\'")}'"
 	    }
@@ -677,9 +677,11 @@ QActor hold context ctx_cargoservice{
 	   whenRequest get_hold_state -> serving_get_hold_state
 	   whenRequest reserve_slot -> check_reservation
 	  
+	  
 	/*Verifico la presenza di slot liberi all'interno della stiva e che il MaxLoad della nave non venga superato */
-	
 	State check_reservation{
+		println("$name | checking reservation request") color yellow
+		
 		onMsg(reserve_slot : reserve_slot(WEIGHT)){
 			[#
 				val weight = payloadArg(0).toInt()
@@ -687,9 +689,8 @@ QActor hold context ctx_cargoservice{
 				var Cause = "" 
 
 				if (currentLoad + weight > MaxLoad){
-					Cause= "Exceeds MaxLoad"
-				
-				}else{
+					Cause = "'Exceeds MaxLoad'"
+				} else{
 					// .find{it.value} è un iteratore Kotlin che restituisce la prima entry
 					// nella struttura dati tale per cui l'espressione tra graffe risulti 'true'
 					//
@@ -697,7 +698,7 @@ QActor hold context ctx_cargoservice{
 					// nel nostro caso ha un campo value in quanto è l'entry di una mappa
 					FreeSlot = slots.entries.find{it.value}?.key
 					if (FreeSlot == null){
-						Cause = "All slots are occupied"
+						Cause = "'All slots are occupied''"
 					}
 				}
 			#]
@@ -736,6 +737,69 @@ QActor hold context ctx_cargoservice{
 
 
 
+//QActor hold_mock context ctx_cargoservice{
+//	[# 
+//		var Counter = 0
+//	#]
+//	
+//	State s0 initial {
+//		println("$name | STARTS")
+//	} 
+//	Goto wait_request
+//	
+//	  
+//	State wait_request{
+////		println("$name | waiting for request") color yellow
+//	}
+//	Transition t0
+//	   whenRequest reserve_slot -> handle_request
+//	 
+//	
+//	State handle_request{
+//		delay 1000
+//		
+//		// risposte mock
+//		if [# Counter == 0 #] {
+//			replyTo reserve_slot with reserve_slot_success : reserve_slot_success(slot1)
+//		} 
+//		
+//		if [# Counter == 1 #] {
+//			[# val Cause1 = "'Exceeds MaxLoad'" #]
+//			replyTo reserve_slot with reserve_slot_fail : reserve_slot_fail($Cause1)
+//		}
+//		
+//		if [# Counter == 2 #] {
+//			replyTo reserve_slot with reserve_slot_success : reserve_slot_success(slot3)
+//		}
+//		
+//		if [# Counter == 3 #] {
+//			[# val Cause2 = "'All slots are occupied'" #]
+//			replyTo reserve_slot with reserve_slot_fail : reserve_slot_fail($Cause2)
+//		}
+//		
+//		[# 
+//			Counter++ 
+//			
+//			if(Counter == 4)
+//				Counter = 0
+//		#]
+//	}
+//	Goto wait_request
+//} 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 QActor external_client context ctx_cargoservice{
  	State s0 initial {
@@ -750,9 +814,9 @@ QActor external_client context ctx_cargoservice{
   	State work0 {
  		println("$name | sends requests") color cyan
  		request cargoservice -m load_product: load_product(17)
- 		request cargoservice -m load_product: load_product(17)
- 		request cargoservice -m load_product: load_product(17)
- 		request cargoservice -m load_product: load_product(17)
+ 		request cargoservice -m load_product: load_product(20)
+ 		request cargoservice -m load_product: load_product(21)
+ 		request cargoservice -m load_product: load_product(22)
  		delay 2000
   	} 
   	

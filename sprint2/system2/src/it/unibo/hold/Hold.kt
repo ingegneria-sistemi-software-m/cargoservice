@@ -32,7 +32,7 @@ class Hold ( name: String, scope: CoroutineScope, isconfined: Boolean=false, isd
 		 
 				var MaxLoad = 500
 				var currentLoad = 0
-				val slots = hashMapOf(
+				val slots = linkedMapOf(
 					"slot1" to true, 
 					"slot2" to true,
 					"slot3" to true,
@@ -47,7 +47,7 @@ class Hold ( name: String, scope: CoroutineScope, isconfined: Boolean=false, isd
 				
 				    val rawJson = """{"currentLoad":$currentLoad,"slots":{$slotsJson}}"""
 				
-				 	// println("DEBUG raw JSON: $rawJson")
+				 	 println("DEBUG raw JSON: $rawJson")
 				
 				    return "'${rawJson.replace("'", "\\'")}'"
 			    }
@@ -75,6 +75,7 @@ class Hold ( name: String, scope: CoroutineScope, isconfined: Boolean=false, isd
 				}	 
 				state("check_reservation") { //this:State
 					action { //it:State
+						CommUtils.outyellow("$name | checking reservation request")
 						if( checkMsgContent( Term.createTerm("reserve_slot(WEIGHT)"), Term.createTerm("reserve_slot(WEIGHT)"), 
 						                        currentMsg.msgContent()) ) { //set msgArgList
 								
@@ -83,9 +84,8 @@ class Hold ( name: String, scope: CoroutineScope, isconfined: Boolean=false, isd
 												var Cause = "" 
 								
 												if (currentLoad + weight > MaxLoad){
-													Cause= "Exceeds MaxLoad"
-												
-												}else{
+													Cause = "'Exceeds MaxLoad'"
+												} else{
 													// .find{it.value} è un iteratore Kotlin che restituisce la prima entry
 													// nella struttura dati tale per cui l'espressione tra graffe risulti 'true'
 													//
@@ -93,7 +93,7 @@ class Hold ( name: String, scope: CoroutineScope, isconfined: Boolean=false, isd
 													// nel nostro caso ha un campo value in quanto è l'entry di una mappa
 													FreeSlot = slots.entries.find{it.value}?.key
 													if (FreeSlot == null){
-														Cause = "All slots are occupied"
+														Cause = "'All slots are occupied''"
 													}
 												}
 								if(  FreeSlot != null  

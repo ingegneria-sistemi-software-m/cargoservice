@@ -44,9 +44,9 @@ class External_client ( name: String, scope: CoroutineScope, isconfined: Boolean
 					action { //it:State
 						CommUtils.outcyan("$name | sends requests")
 						request("load_product", "load_product(17)" ,"cargoservice" )  
-						request("load_product", "load_product(17)" ,"cargoservice" )  
-						request("load_product", "load_product(17)" ,"cargoservice" )  
-						request("load_product", "load_product(17)" ,"cargoservice" )  
+						request("load_product", "load_product(20)" ,"cargoservice" )  
+						request("load_product", "load_product(21)" ,"cargoservice" )  
+						request("load_product", "load_product(22)" ,"cargoservice" )  
 						delay(2000) 
 						//genTimer( actor, state )
 					}

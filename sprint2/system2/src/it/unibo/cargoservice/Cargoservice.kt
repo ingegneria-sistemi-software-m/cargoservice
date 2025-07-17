@@ -92,7 +92,7 @@ class Cargoservice ( name: String, scope: CoroutineScope, isconfined: Boolean=fa
 				state("get_weight_fail") { //this:State
 					action { //it:State
 						 
-									val Causa = "Non è stato possibile recuperare il peso di PID: $Cur_prod_PID in quanto non registrato dentro a productservice."
+									val Causa = "'Non è stato possibile recuperare il peso di PID: $Cur_prod_PID in quanto non registrato dentro a productservice.'"
 						CommUtils.outred("$name | $Causa")
 						answer("load_product", "load_refused", "load_refused($Causa)"   )  
 						//genTimer( actor, state )
@@ -120,7 +120,7 @@ class Cargoservice ( name: String, scope: CoroutineScope, isconfined: Boolean=fa
 						                        currentMsg.msgContent()) ) { //set msgArgList
 								 
 												val Causa = payloadArg(0) 
-												val CausaMsg = "Non è stato possibile prenotare uno slot per (PID: $Cur_prod_PID, KG: $Cur_prod_weight). \n\tCausa: $Causa"
+												val CausaMsg = "'Non è stato possibile prenotare uno slot per (PID: $Cur_prod_PID, KG: $Cur_prod_weight). \n\tCausa: $Causa'"
 								CommUtils.outred("$name | $CausaMsg")
 								answer("load_product", "load_refused", "load_refused($CausaMsg)"   )  
 						}

@@ -58,7 +58,7 @@ public class HoldTest {
         
         assertTrue("TEST 2: Exceeds MaxLoad", 
                  response.contains("reserve_slot_fail") && 
-                 response.contains("Exceeds MaxLoad"));
+                 response.contains("'Exceeds MaxLoad'"));
     }
 
     
@@ -147,7 +147,7 @@ public class HoldTest {
         assertTrue("TEST 3: prenotazione dovrebbe fallire", 
                  response.contains("reserve_slot_fail"));
         assertTrue("TEST 3: motivo dovrebbe essere 'All slots are occupied'", 
-                 response.contains("All slots are occupied"));
+                 response.contains("'All slots are occupied'"));
     }
     
     
