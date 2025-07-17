@@ -608,8 +608,6 @@ QActor hold context ctx_cargoservice{
 ### Hold
 
 #### Scenario 1: Test prenotazione riuscita 
-blah blah blah
-
 
 ```text
 @Test
