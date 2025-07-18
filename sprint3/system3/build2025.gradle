@@ -149,7 +149,7 @@ eclipse {
 
 application {
     //Define the main class for the application.
-    mainClassName    = 'it.unibo.ctx_webgui.MainCtx_webguiKt'
+    mainClassName    = 'it.unibo.ctx_cargoservice.MainCtx_cargoserviceKt'
 }
  
  jar {
@@ -172,9 +172,9 @@ task dovesiamo {
 
 distributions {
     main {
-        distributionBaseName = 'webgui'
+        distributionBaseName = 'arch3'
         contents { 
-             from './webgui.pl'
+             from './arch3.pl'
              from './sysRules.pl'
              from './facadeConfig.json'
         }
@@ -185,7 +185,7 @@ task run0(type: JavaExec) {
     group = "Execution"
     description = "Run the main class with JavaExecTask"
     classpath = sourceSets.main.runtimeClasspath
-    main = 'it.unibo.ctx_webgui.MainCtx_webguiKt'
+    main = 'it.unibo.ctx_cargoservice.MainCtx_cargoserviceKt'
 }
 
 /*
