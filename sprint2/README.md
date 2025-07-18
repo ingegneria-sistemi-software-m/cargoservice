@@ -937,6 +937,26 @@ Come per lo sprint 1 la modellazione tramite il DSL QAK ha prodotto dei modelli 
 
 
 
+## Deployment
+I modelli QAK sviluppati in questo sprint sono recuperabile alla [seguente repository github](https://github.com/ingegneria-sistemi-software-m/cargoservice/tree/sprint2/sprint2), dentro alle cartella "system2/" e "iodevices/".
+
+Per avviare il progetto:
+1. eseguire ```docker compose -f arch2.yaml up``` per lanciare i componenti relativi alla logica di buisness del sistema
+
+2. aggiungere qualche prodotto al db mongo appena avviato, eseguendo con node lo script [setupmongo.js](https://github.com/ingegneria-sistemi-software-m/cargoservice/blob/master/setup_mongo.js)
+
+3. nel lanciare i componenti relativi ai dispositivi di I/O si hanno due alternative 
+	- se si ha a disposizione un raspberry pi, e quindi dei dispositivi fisici da comandare, si può copiare la distribuzione ottenuta con ```./gradlew run``` all'interno del raspberry e lanciarla al suo interno
+	- se non si ha a disposizione un raspberry si possono lanciare i simulatori con ```./gradlew run```
+
+4. aprire il browser e digitare ```localhost:8090``` per visualizzare l'ambiente virtuale WEnv e il robot che effettua i suoi interventi di carico
+
+
+
+
+
+
+
 ## Sintesi Finale e Nuova Architettura
 
 In questo sprint si sono implementati i componenti: [sonar](#analisi-del-problema--sonar) e [hold](#analisi-del-problema--hold). Grazie al primo, è diventato possibile rilevare la presenza/assenza dei container, grazie al secondo è diventato possibile gestire lo stato del deposito completando in questa maniera la logica del sistema.
