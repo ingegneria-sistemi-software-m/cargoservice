@@ -330,10 +330,195 @@ QActor measure_processor context ctx_iodevices {
 ### Sonar
 
 #### Scenario 1: container presente per 3 secondi
+```Java
+@Test
+public void testContainerArrived() throws Exception {
+	// versione Java dei waitgroup di Go.
+	// Serve a bloccare il main thread fino a quando 
+	// i child thread non completano
+	CountDownLatch latch = new CountDownLatch(1);
+	// osservo il coap endpoint per ricevere gli eventi di reazione 
+	// agli eventi che genero nel test
+	CoapClient client = new CoapClient(SonarTest.CoapEndopoint);  
+	CoapObserveRelation relation = client.observe(
+		new CoapHandler() {
+			@Override
+			public void onLoad(CoapResponse response) {
+				String content = response.getResponseText();
+				CommUtils.outgreen("ActorObserver | value=" + content );
+				
+				assertTrue("TEST: container_arrived non ricevuto", 
+							content.contains("container_arrived"));
+				
+				latch.countDown();
+			}					
+			@Override
+			public void onError() {
+				CommUtils.outred("OBSERVING FAILED");
+				
+				fail("errore nella osservazione del sonar");
+				
+				latch.countDown();
+			}
+		}
+	);	
+	
+	// container presente per tre misurazioni
+	IApplMessage measurement = 
+		CommUtils.buildEvent("tester", "measurement", "measurement(10)");
+	conn.forward(measurement);
+	conn.forward(measurement);
+	conn.forward(measurement);
+	
+	// Aspetto la risposta del coap endpoint.
+	// latch.await() restituisce false se scade il timeout
+	boolean arrived = latch.await(5, TimeUnit.SECONDS);
+	relation.proactiveCancel();
+	client.shutdown();
+	// verifico anche che il timeout non sia scaduto
+	assertTrue("onLoad non è stato invocato entro il timeout", arrived);
+}
+```
 
 #### Scenario 2: container presente per 3 secondi e poi assente per 3 secondi
+```Java
+@Test
+public void testContainerArrivedThenAbsent() throws Exception {
+	// versione Java dei waitgroup di Go.
+	// Serve a bloccare il main thread fino a quando 
+	// i child thread non completano
+	CountDownLatch latch = new CountDownLatch(2);
+	// osservo il coap endpoint per ricevere gli eventi di reazione 
+	// agli eventi che genero nel test
+	CoapClient client = new CoapClient(SonarTest.CoapEndopoint);  
+	CoapObserveRelation relation = client.observe(
+		new CoapHandler() {
+			int counter = 0;
+			@Override
+			public void onLoad(CoapResponse response) {
+				String content = response.getResponseText();
+				CommUtils.outgreen("ActorObserver | value=" + content );
+				
+				if(counter==1) {
+					assertTrue("TEST: container_arrived non ricevuto",
+						content.contains("container_arrived"));
+				}
+				else if(counter==2) {
+					assertTrue("TEST: container_absent non ricevuto 
+						dopo container_arrived",
+						content.contains("container_absent"));
+				}
+				latch.countDown();
+				
+				counter++;
+			}					
+			@Override
+			public void onError() {
+				CommUtils.outred("OBSERVING FAILED");
+				
+				fail();
+				
+				latch.countDown();
+				counter++;
+			}
+		}
+	);	
+	
+	// container presente per tre misurazioni
+	IApplMessage present_measurement = CommUtils.buildEvent("tester",
+										"measurement", "measurement(10)");
+	IApplMessage absent_measurement = CommUtils.buildEvent("tester",
+										"measurement", "measurement(20)");
+	
+	conn.forward(absent_measurement);
+	conn.forward(absent_measurement);
+	conn.forward(absent_measurement);
+	conn.forward(present_measurement);
+	conn.forward(present_measurement);
+	conn.forward(present_measurement);
+	
+	// Aspetto la risposta del coap endpoint.
+	// latch.await() restituisce false se scade il timeout
+	boolean arrived = latch.await(5, TimeUnit.SECONDS);
+	relation.proactiveCancel();
+	client.shutdown();
+	// verifico anche che il timeout non sia scaduto
+	assertTrue("onLoad non è stato invocato entro il timeout", arrived);
+}
+```
+
 
 #### Scenario 3: rilevazione guasto e ripristino
+```Java
+@Test
+public void testFaultySonarAndRecovery() throws Exception {
+	// versione Java dei waitgroup di Go.
+	// Serve a bloccare il main thread fino a quando 
+	// i child thread non completano
+	CountDownLatch latch = new CountDownLatch(2);
+	
+	// osservo il coap endpoint per ricevere gli eventi di reazione 
+	// agli eventi che genero nel test
+	CoapClient client = new CoapClient(SonarTest.CoapEndopoint);  
+	CoapObserveRelation relation = client.observe(
+		new CoapHandler() {
+			int counter = 0;
+			@Override
+			public void onLoad(CoapResponse response) {
+				String content = response.getResponseText();
+				CommUtils.outgreen("ActorObserver | value=" + content );
+				
+				if(counter==0) {
+					assertTrue("TEST: guasto non ricevuto",
+						content.contains("guasto"));
+				}
+				else if(counter==1) {
+					assertTrue("TEST: ripristino non ricevuto",
+						content.contains("ripristinato"));
+				}
+				
+				latch.countDown();
+				
+				counter++;
+			}					
+			@Override
+			public void onError() {
+				CommUtils.outred("OBSERVING FAILED");
+				
+				fail();
+				
+				latch.countDown();
+				counter++;
+			}
+		}
+	);	
+	
+	// container presente per tre misurazioni
+	IApplMessage guasto_measurement = CommUtils.buildEvent("tester",
+										"measurement", "measurement(31)");
+	IApplMessage recovery_measurement = CommUtils.buildEvent("tester",
+										"measurement", "measurement(20)");
+	
+	conn.forward(guasto_measurement);
+	conn.forward(guasto_measurement);
+	conn.forward(guasto_measurement);
+	conn.forward(recovery_measurement);
+
+	
+	// Aspetto la risposta del coap endpoint.
+	// latch.await() restituisce false se scade il timeout
+	boolean arrived = latch.await(5, TimeUnit.SECONDS);
+	relation.proactiveCancel();
+	client.shutdown();
+	// verifico anche che il timeout non sia scaduto
+	assertTrue("onLoad non è stato invocato entro il timeout", arrived);
+}
+```
+
+
+
+
+
 
 Successivamente, si è testato il sonar anche utilizzando i seguenti attori mock.
 
@@ -748,7 +933,27 @@ QActor hold context ctx_cargoservice{
 
 
 ## Progettazione
+Come per lo sprint 1 la modellazione tramite il DSL QAK ha prodotto dei modelli eseguibili. In questo caso, non c'è stato addirittura bisogno di una fase di progettazione. I componenti modellati sono già soddifacenti nella loro forma da modello eseguibile.   
 
 
-### sonar
-non ha bisogno di progettazione
+
+## Sintesi Finale e Nuova Architettura
+
+In questo sprint si sono implementati i componenti: [sonar](#analisi-del-problema--sonar) e [hold](#analisi-del-problema--hold). Grazie al primo, è diventato possibile rilevare la presenza/assenza dei container, grazie al secondo è diventato possibile gestire lo stato del deposito completando in questa maniera la logica del sistema.
+
+Durante l'analisi del componente Hold si sono anche definiti i messaggi che quest'ultimo dovrà scambiarsi con la web-gui, componente che si implementerà nello sprint 3.
+
+L'architettura del sistema risultante da questo sprint è suddivisibile in due macrocontesti.
+
+#### Servizio principale
+
+![arch2](./arch2.png)
+
+#### Dispositivi di I/O
+
+![iodevicesarch](./iodevicesarch.png)
+
+
+
+### Tempo impiegato e suddivisione del lavoro
+...
