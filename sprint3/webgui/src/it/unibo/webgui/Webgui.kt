@@ -34,12 +34,31 @@ class Webgui ( name: String, scope: CoroutineScope, isconfined: Boolean=false, i
 		        
 		        fun stateUpdate(json: String){
 		            currentState = json
-		            println("UPDATE RECEIVED: ${json.take(50)}...") 
+		            println("UPDATE RECEIVED: $json") 
 		        }
 		return { //this:ActionBasciFsm
 				state("init") { //this:State
 					action { //it:State
-						CommUtils.outblue("$name | Starting in event listening mode")
+						delay(1000) 
+						CommUtils.outblue("$name | start")
+						CommUtils.outblue("$name | getting hold state for the first time")
+						request("get_hold_state", "get_hold_state(si)" ,"hold_mock" )  
+						//genTimer( actor, state )
+					}
+					//After Lenzi Aug2002
+					sysaction { //it:State
+					}	 	 
+					 transition(edgeName="t00",targetState="update_gui",cond=whenReply("hold_state"))
+				}	 
+				state("update_gui") { //this:State
+					action { //it:State
+						if( checkMsgContent( Term.createTerm("hold_update(JSonString)"), Term.createTerm("hold_update(JSonString)"), 
+						                        currentMsg.msgContent()) ) { //set msgArgList
+								 
+								            	var Update = payloadArg(0)
+								            	println("$name | " + Update)
+								            	stateUpdate(Update)
+						}
 						//genTimer( actor, state )
 					}
 					//After Lenzi Aug2002
@@ -55,20 +74,7 @@ class Webgui ( name: String, scope: CoroutineScope, isconfined: Boolean=false, i
 					//After Lenzi Aug2002
 					sysaction { //it:State
 					}	 	 
-					 transition(edgeName="t00",targetState="handle_update",cond=whenEvent("hold_update"))
-				}	 
-				state("handle_update") { //this:State
-					action { //it:State
-						if( checkMsgContent( Term.createTerm("hold_update(JSonString)"), Term.createTerm("hold_update(JSonString)"), 
-						                        currentMsg.msgContent()) ) { //set msgArgList
-								 stateUpdate(payloadArg(0))  
-						}
-						//genTimer( actor, state )
-					}
-					//After Lenzi Aug2002
-					sysaction { //it:State
-					}	 	 
-					 transition( edgeName="goto",targetState="listening", cond=doswitch() )
+					 transition(edgeName="t01",targetState="update_gui",cond=whenEvent("hold_update"))
 				}	 
 			}
 		}

@@ -27,7 +27,10 @@ with Diagram('webguiArch', show=False, outformat='png', graph_attr=graphattr) as
 ### see https://renenyffenegger.ch/notes/tools/Graphviz/attributes/label/HTML-like/index
      with Cluster('ctx_webgui', graph_attr=nodeattr):
           webgui=Custom('webgui','./qakicons/symActorWithobjSmall.png')
-     with Cluster('ctx_cargoservice', graph_attr=nodeattr):
-          hold=Custom('hold(ext)','./qakicons/externalQActor.png')
+          hold_mock=Custom('hold_mock','./qakicons/symActorWithobjSmall.png')
+          hold_updater=Custom('hold_updater','./qakicons/symActorWithobjSmall.png')
      sys >> Edge( label='hold_update', **evattr, decorate='true', fontcolor='darkgreen') >> webgui
+     hold_mock >> Edge( label='hold_update', **eventedgeattr, decorate='true', fontcolor='red') >> sys
+     hold_updater >> Edge(color='magenta', style='solid', decorate='true', label='<reserve_slot<font color="darkgreen"> reserve_slot_success reserve_slot_fail</font> &nbsp; >',  fontcolor='magenta') >> hold_mock
+     webgui >> Edge(color='magenta', style='solid', decorate='true', label='<get_hold_state<font color="darkgreen"> hold_state</font> &nbsp; >',  fontcolor='magenta') >> hold_mock
 diag

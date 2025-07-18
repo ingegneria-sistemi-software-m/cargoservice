@@ -10,6 +10,7 @@ request( reserve_slot, reserve_slot(WEIGHT) ). %richiesta verso hold per prenota
 reply( reserve_slot_success, reserve_slot_success(SLOT) ). %%for reserve_slot | se la richiesta è soddisfacibile, hold restituisce il nome/id dello slot prenotato
 reply( reserve_slot_fail, reserve_slot_fail(CAUSA) ). %%for reserve_slot | fallisce se il peso supera MaxLoad oppure se non c'è uno slot libero
 request( get_hold_state, get_hold_state(X) ). %richiesta verso hold per conoscere lo stato iniziale del deposito.Contiene il peso attuale e lo stato degli slot
+reply( hold_state, hold_state(JSonString) ). %%for get_hold_state | risposta verso gui da parte di hold con le informazioni interne del deposito
 event( hold_update, hold_update(JSonString) ). %evento che avvisa di un cambiamento nello stato interno di hold
 request( handle_load_operation, handle_load_operation(SLOT) ). %richiesta verso cargorobot per l'intervento di carico
 reply( load_operation_complete, load_operation_complete(OK) ). %%for handle_load_operation | l'intervento di carico non può fallire quindi prevediamo solo una risposta

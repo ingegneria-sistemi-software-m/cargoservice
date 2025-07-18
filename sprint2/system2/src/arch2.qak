@@ -16,7 +16,7 @@ Reply   reserve_slot_success : reserve_slot_success(SLOT) for reserve_slot "se l
 Reply   reserve_slot_fail    : reserve_slot_fail(CAUSA) for reserve_slot   "fallisce se il peso supera MaxLoad oppure se non c'è uno slot libero"
 
 Request get_hold_state		 : get_hold_state(X)						   "richiesta verso hold per conoscere lo stato iniziale del deposito.Contiene il peso attuale e lo stato degli slot"
-Reply   hold_state			 : hold_state(JSonString)					   "risposta verso gui da parte di hold con le informazioni interne del deposito"
+Reply   hold_state			 : hold_state(JSonString) for get_hold_state				   "risposta verso gui da parte di hold con le informazioni interne del deposito"
 
 Event	hold_update			 : hold_update(JSonString)					   "evento che avvisa di un cambiamento nello stato interno di hold"
 
