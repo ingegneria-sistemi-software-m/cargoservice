@@ -26,7 +26,7 @@ Gli sprint eseguono uno zoom progressivo sulle macro-componenti, attivando un pr
 
 - [Sprint 0](sprint0)
 - [Sprint 1](sprint1)
-- Sprint 2 (previsto ma ancora da mettere in atto)
+- [Sprint 2](sprint2)
 - Sprint 3 (previsto ma ancora da mettere in atto)
 
 ## Team di Lavoro
