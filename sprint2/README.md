@@ -17,21 +17,13 @@ L'architettura del sistema risultante dallo sprint 1 è la seguente.
 L'obiettivo dello sprint 2 sarà affrontare il sottoinsieme dei requisiti relativi ai componenti _sonar_ e _hold_, effettuando l'analisi del problema e la progettazione. Particolare importanza verrà data alle **interazioni** che questi componenti dovranno avere con il resto del sistema.
 
 
-<!-- togli la roba tra parentesi  -->
-
 I [requisiti](https://github.com/ingegneria-sistemi-software-m/cargoservice/tree/master/requirements) affrontati nello sprint 2 saranno i seguenti:
 - implementare un sistema in grado di rilevare la presenza/assenza di un _container_ presso l'_IO-port_
-    - ( 2. is able to detect (by means of the sonar sensor) the presence of the product container at the ioport )
 - implementare un sistema in grado di rilevare e gestire malfunzionamenti del sonar
-    - ( 5. interrupts any activity and turns on a led if the sonar sensor measures a distance D > DFREE for at least 3 secs (perhaps a sonar failure). The service continues its activities as soon as the sonar measures a distance D <= DFREE. ) 
 - implementare un sistema in grado di tenere traccia dello stato del deposito. Questo include:
     - lo stato libero/occupato di ogni _slot_
     - il peso totale dei container caricati all'interno del deposito
-    - (The request is rejected when:
-            - the product-weight is evaluated too high, since the ship can carry a maximum load of MaxLoad>0  kg.
-            - the hold is already full, i.e. the 4 slots are alrready occupied.)
 - implementare un sistema in grado di condividere con la _web-gui_ (o a qualunque altro componente interessato) lo stato del deposito
-    - (4. is able to show the current state of the hold, by mesans of a dynamically updated web-gui.)
 
 
 
@@ -325,9 +317,7 @@ QActor measure_processor context ctx_iodevices {
 
 
 
-## Piano di test
-
-### Sonar
+## Piano di test | Sonar
 
 #### Scenario 1: container presente per 3 secondi
 ```Java
@@ -644,26 +634,22 @@ QActor sonar_listener context ctx_iodevices {
 ```
 
 
-### Hold
-
 ## Analisi del problema | Hold
-L'attore _hold_ è responsabile di effettuare dinamicamente la prenotazione degli slot di carico nella stiva, garantendo che la capacità massima della nave MaxLoad non venga superata.  
+L'attore _hold_ è responsabile di effettuare la prenotazione degli slot di carico nella stiva, garantendo che la capacità massima della nave (MaxLoad) non venga superata.  
 
 Il tipico ciclo di attività di _hold_ è il seguente:
 1. _hold_ riceve da _cargoservice_ una richiesta di prenotazione di uno slot.
-2. _hold_ ha il compito di tenere traccia della disponibilità degli slot liberi e del carico cumulativo, in base a ciò valuta la possibilità di effettuare l'intervento di carico. Le casistiche previste sono le seguenti:
+2. _hold_ valuta la possibilità di effettuare l'intervento di carico. Le casistiche previste sono le seguenti:
 	- Se il carico cumulativo (peso del nuovo container + carico attuale nel deposito) supera MaxLoad, non è possibile caricare il container. In tal caso _hold_ risponde a _cargoservice_ con **reserve_slot_fail**
-	- Se il carico cumulativo non supera MaxLoad e non sono presenti slot liberi, anche in questo caso non è possibile caricare il container. In tal caso _hold_ risponde al _cargoservice_ con **reserve_slot_fail** 
-	- Se Il carico cumulativo non supera MaxLoad e vi è almeno uno slot libero è possibile procedere con l'intervento di carico. La risposta al _cargoservice_ sarà **reserve_slot_success_**
+	- Se il carico cumulativo non supera MaxLoad ma non sono presenti slot liberi, anche in questo caso non è possibile caricare il container. In tal caso _hold_ risponde al _cargoservice_ con **reserve_slot_fail** 
+	- Se Il carico cumulativo non supera MaxLoad e vi è almeno uno slot libero è possibile procedere con l'intervento di carico. La risposta a _cargoservice_ sarà **reserve_slot_success_**
 
 ### Considerazioni
-Il ciclo di attività dell'attore _hold_ è divisibile in due fasi:
-- fase di ricezione : Attesa passiva di messaggi (reserve_slot)
-- fase di elaborazione : validazione delle richieste e aggiornamento dello stato interno
+Dall'analisi dei requisiti si è evinto che **non è necessario implementare la casistica in cui gli slot di _hold_ si liberino**.
 
-Si vuole sottolineare in questa parte che si è evinto dall'analisi dei requisiti che non è necessario implementare la casistica in cui gli slot di _hold_ si liberino.
+Si può notare un legame tra _hold_ e il componente _web-gui_. Già dall'analisi dei requisiti è risultato chiaro che questi due componenti dovessero interagire; ora che si è esplicitata la sequenza di attività di hold. questo è ancora più chiaro.
 
-In questa fase si è anche svolto una valutazione relativa al legame tra _hold_ e la componente _web-GUI_. Dall'analisi dei requisiti è risultato chiaro che questi due componenti devono interagire.In particolare, la web-gui deve recuperare lo stato mantenuto da _hold_ e ricevere da quest'ultimo aggiornamenti periodici. Per questo motivo, il comportamento dell'attore _hold_ è anche in grado di:
+In particolare, la web-gui deve recuperare lo stato della stiva mantenuto da _hold_ e ricevere da quest'ultimo aggiornamenti periodici quando questo stato viene modificato. _hold_ è quindi anche in grado di:
 1. Rispondere a query riguardanti il suo stato
 2. Emettere eventi di aggiornamento quando il suo stato subisce una modifica
 
@@ -671,14 +657,14 @@ In questa fase si è anche svolto una valutazione relativa al legame tra _hold_ 
 
 ### Messaggi
 ```
-Request reserve_slot         : reserve_slot(WEIGHT) 			    	   "richiesta verso hold per prenotare uno slot. Contiene il peso del prodotto da caricare"
-Reply   reserve_slot_success : reserve_slot_success(SLOT) for reserve_slot "se la richiesta è soddisfacibile, hold restituisce il nome/id dello slot prenotato"
-Reply   reserve_slot_fail    : reserve_slot_fail(CAUSA) for reserve_slot   "fallisce se il peso supera MaxLoad oppure se non c'è uno slot libero"
+Request reserve_slot         : reserve_slot(WEIGHT) 			    	   
+Reply   reserve_slot_success : reserve_slot_success(SLOT) for reserve_slot 
+Reply   reserve_slot_fail    : reserve_slot_fail(CAUSA) for reserve_slot   
 
-Request get_hold_state		 : get_hold_state(X)						   "richiesta verso hold per conoscere lo stato iniziale del deposito.Contiene il peso attuale e lo stato degli slot"
-Reply   hold_state			 : hold_state(JSonString)					   "risposta verso gui da parte di hold con le informazioni interne del deposito"
+Request get_hold_state		 : get_hold_state(X)						   
+Reply   hold_state			 : hold_state(JSonString) for get_hold_state				   
 
-Event	hold_update			 : hold_update(JSonString)					   "evento che avvisa di un cambiamento nello stato interno di hold"
+Event	hold_update			 : hold_update(JSonString)					   
 ```
 
 
@@ -785,9 +771,7 @@ QActor hold context ctx_cargoservice{
 	Goto wait_request
 }
 ```
-## Piano di test
-
-### Hold
+## Piano di test | Hold
 
 #### Scenario 1: Test prenotazione riuscita 
 
