@@ -1,7 +1,17 @@
 # Sprint 2
 
+## Indice
 
-## Punto di partenza
+- [Punto di Partenza](#punto-di-partenza)
+- [Obiettivi](#obiettivi)
+- [Sonar](#sonar)
+- [Hold](#hold)
+- [Progettazione](#progettazione)
+- [Sintesi Finale e Nuova Architettura](#sintesi-finale-e-nuova-architettura)
+- [Tempo Impiegato e Ripartizione del Lavoro](#tempo-impiegato-e-ripartizione-del-lavoro)
+
+## Punto di Partenza
+
 Nello [sprint 1](https://github.com/ingegneria-sistemi-software-m/cargoservice/blob/master/sprint1) si sono implementati i componenti che definiscono il corebuisness del sistema: [_cargoservice_](https://github.com/ingegneria-sistemi-software-m/cargoservice/blob/master/sprint1/README.md#analisi-del-problema--cargoservice) e [_cargorobot_](https://github.com/ingegneria-sistemi-software-m/cargoservice/blob/master/sprint1/README.md#analisi-del-problema--cargorobot). 
 
 Nel far questo si sono anche definite le interfaccie per i componenti _hold_ e _sonar_ da svilupparsi in questo sprint.
@@ -12,10 +22,9 @@ L'architettura del sistema risultante dallo sprint 1 è la seguente.
 
 <div class="page-break"></div>
 
-
 ## Obiettivi
-L'obiettivo dello sprint 2 sarà affrontare il sottoinsieme dei requisiti relativi ai componenti _sonar_ e _hold_, effettuando l'analisi del problema e la progettazione. Particolare importanza verrà data alle **interazioni** che questi componenti dovranno avere con il resto del sistema.
 
+L'obiettivo dello sprint 2 sarà affrontare il sottoinsieme dei requisiti relativi ai componenti _sonar_ e _hold_, effettuando l'analisi del problema e la progettazione. Particolare importanza verrà data alle **interazioni** che questi componenti dovranno avere con il resto del sistema.
 
 I [requisiti](https://github.com/ingegneria-sistemi-software-m/cargoservice/tree/master/requirements) affrontati nello sprint 2 saranno i seguenti:
 - implementare un sistema in grado di rilevare la presenza/assenza di un _container_ presso l'_IO-port_
@@ -25,10 +34,10 @@ I [requisiti](https://github.com/ingegneria-sistemi-software-m/cargoservice/tree
     - il peso totale dei container caricati all'interno del deposito
 - implementare un sistema in grado di condividere con la _web-gui_ (o a qualunque altro componente interessato) lo stato del deposito
 
+## Sonar
 
+### Analisi del Problema 
 
-
-## Analisi del problema | Sonar
 L'attore _sonar_ è responsabile di effettuare **periodicamente** delle misurazioni di distanze allo scopo di rilevare la presenza dei container che arrivano all'_IO-port_.  
 
 Il tipico ciclo di attività di _sonar_ è il seguente:
@@ -47,21 +56,20 @@ Il tipico ciclo di attività di _sonar_ è il seguente:
     
 4.  solo nel caso in cui la misurazione corrente _m_ abbia portato al passo precedente alla rilevazione di un guasto nel sonar fisico, **_sonar_ cambia di stato** e attende la prima misurazione _m' < DFREE_ prima di tornare ad uno stato di corretto funzionamento. All'arrivo della misurazione _m'_, _sonar_ fa ripartire il resto del sistema **emettendo l'evento 'riprendi_tutto'** introdotto nello sprint 1.
 
-
-
 ### Considerazioni
+
 Il ciclo di attività dell'attore _sonar_ è divisibile in due fasi:
 - fase di recupero della misurazione
 - fase di processamento della misurazione
 
 Risulta quindi possibile separare _sonar_ in **due attori distinti**, uno per fase. Questo porta ad avere come vantaggio il poter **produrre misurazioni fittizzie** sostituendo l'attore che recupera le misurazioni dal sonar fisico con un attore mock, oppure con una test unit, rendendo facilmente testabile la logica di processamento. 
 
-
-
 ### Problematiche
+
 L'analisi fatta fino ad ora fa sorgere le seguenti domande.
 
 #### Come fa _sonar_ a comandare il sonar fisico per ottenere le misurazioni?
+
 Il caro committente ha fornito uno script python che fa proprio questo. Più nel dettaglio, lo script fornito comanda i **pin GPIO** di un **Raspberry PI** a cui il sonar fisico è collegato, ottenendo **una misurazione al secondo**.
 
 ```python
@@ -106,8 +114,8 @@ while True:
     time.sleep(1)
 ```
 
-
 #### Come fa _sonar_ a capire se le misurazioni effettuate negli ultimi 3 secondi sono state consistenti?
+
 È evidente che _sonar_ dovrà mantenere delle informazioni nel suo stato riguardanti le misurazioni precedenti. Più nel dettaglio, _sonar_ avrà bisogno di:
 - una variabile che conta il numero di misurazioni consistenti effettuate.
 - una variabile che indica in quale intervallo è ricaduta la misurazione precedente per capire quale intervallo considerare nel decidere se la misurazione corrente è consistente o meno.
@@ -116,8 +124,8 @@ Siccome le misurazioni vengono effettuate una volta al secondo, se il contatore 
 
 Se una misurazione non è consistente, o se le misurazioni sono state consistenti per 3 secondi, il contatore viene resettato.
 
-
 ### Messaggi
+
 _sonar_ emette tutti gli eventi definiti durante l'analisi di _cargorobot_ fatta nello sprint 1
 
 ```
@@ -133,8 +141,8 @@ Oltre a questi, siccome si è deciso di separare _sonar_ in due attori distinti,
 Event measurement 		: measurement(CM)
 ```
 
+### Modello
 
-### Modello Sonar
 L'analisi fatta fino ha portato al seguente modello.
 
 ```Java
@@ -184,9 +192,6 @@ QActor sonardevice context ctx_iodevices {
 	}
 	Goto readSonarData
 }
-
-
-
 
 QActor measure_processor context ctx_iodevices {
 	import "main.java.IntervalliMisurazioni"
@@ -314,12 +319,10 @@ QActor measure_processor context ctx_iodevices {
 	Goto listen_for_measurement
 }
 ```
-
-
-
-## Piano di test | Sonar
+### Piano di test
 
 #### Scenario 1: container presente per 3 secondi
+
 ```Java
 @Test
 public void testContainerArrived() throws Exception {
@@ -371,6 +374,7 @@ public void testContainerArrived() throws Exception {
 ```
 
 #### Scenario 2: container presente per 3 secondi e poi assente per 3 secondi
+
 ```Java
 @Test
 public void testContainerArrivedThenAbsent() throws Exception {
@@ -437,8 +441,8 @@ public void testContainerArrivedThenAbsent() throws Exception {
 }
 ```
 
-
 #### Scenario 3: rilevazione guasto e ripristino
+
 ```Java
 @Test
 public void testFaultySonarAndRecovery() throws Exception {
@@ -504,15 +508,10 @@ public void testFaultySonarAndRecovery() throws Exception {
 	assertTrue("onLoad non è stato invocato entro il timeout", arrived);
 }
 ```
-
-
-
-
-
-
 Successivamente, si è testato il sonar anche utilizzando i seguenti attori mock.
 
 #### sonar_simul
+
 ```Java
 QActor sonar_simul  context ctx_iodevices{
 	State s0 initial{
@@ -587,6 +586,7 @@ QActor sonar_simul  context ctx_iodevices{
 ```
 
 #### sonar_listener
+
 ```Java
 QActor sonar_listener context ctx_iodevices {
 	State s0 initial{
@@ -633,8 +633,10 @@ QActor sonar_listener context ctx_iodevices {
 }
 ```
 
+## Hold
 
-## Analisi del problema | Hold
+### Analisi del problema 
+
 L'attore _hold_ è responsabile di effettuare la prenotazione degli slot di carico nella stiva, garantendo che la capacità massima della nave (MaxLoad) non venga superata.  
 
 Il tipico ciclo di attività di _hold_ è il seguente:
@@ -645,6 +647,7 @@ Il tipico ciclo di attività di _hold_ è il seguente:
 	- Se Il carico cumulativo non supera MaxLoad e vi è almeno uno slot libero è possibile procedere con l'intervento di carico. La risposta a _cargoservice_ sarà **reserve_slot_success_**
 
 ### Considerazioni
+
 Dall'analisi dei requisiti si è evinto che **non è necessario implementare la casistica in cui gli slot di _hold_ si liberino**.
 
 Si può notare un legame tra _hold_ e il componente _web-gui_. Già dall'analisi dei requisiti è risultato chiaro che questi due componenti dovessero interagire; ora che si è esplicitata la sequenza di attività di hold. questo è ancora più chiaro.
@@ -653,9 +656,8 @@ In particolare, la web-gui deve recuperare lo stato della stiva mantenuto da _ho
 1. Rispondere a query riguardanti il suo stato
 2. Emettere eventi di aggiornamento quando il suo stato subisce una modifica
 
-
-
 ### Messaggi
+
 ```
 Request reserve_slot         : reserve_slot(WEIGHT) 			    	   
 Reply   reserve_slot_success : reserve_slot_success(SLOT) for reserve_slot 
@@ -667,8 +669,7 @@ Reply   hold_state			 : hold_state(JSonString) for get_hold_state
 Event	hold_update			 : hold_update(JSonString)					   
 ```
 
-
-### Modello Hold
+### Modello
 
 L'analisi fatta finora ha portato al seguente modello.
 
@@ -771,7 +772,7 @@ QActor hold context ctx_cargoservice{
 	Goto wait_request
 }
 ```
-## Piano di test | Hold
+## Piano di test 
 
 #### Scenario 1: Test prenotazione riuscita 
 
@@ -793,8 +794,8 @@ QActor hold context ctx_cargoservice{
                  response.contains("reserve_slot_success"));
     }
 ```
-#### Scenario 2: Test intervento di carico rifiutato per superamento di MaxLoad
 
+#### Scenario 2: Test intervento di carico rifiutato per superamento di MaxLoad
 
 ```text
 @Test
@@ -817,7 +818,6 @@ QActor hold context ctx_cargoservice{
 ```
 
 #### Scenario 3: Prenotazione fallita data da nessuno slot libero
-
 
 ```text
  @Test
@@ -856,7 +856,6 @@ QActor hold context ctx_cargoservice{
 
 #### Scenario 4: Richiesta dello stato corrente del deposito
 
-
 ```text
 @Test
     public void testGetHoldState() throws Exception {
@@ -878,7 +877,6 @@ QActor hold context ctx_cargoservice{
 ```
 
 #### Scenario 5: Verifica aggiornamento dello stato dopo una prenotazione
-
 
 ```text
 @Test
@@ -915,13 +913,12 @@ QActor hold context ctx_cargoservice{
     }
 ```
 
-
 ## Progettazione
+
 Come per lo sprint 1 la modellazione tramite il DSL QAK ha prodotto dei modelli eseguibili. In questo caso, non c'è stato addirittura bisogno di una fase di progettazione. I componenti modellati sono già soddifacenti nella loro forma da modello eseguibile.   
 
+### Deployment
 
-
-## Deployment
 I modelli QAK sviluppati in questo sprint sono recuperabile alla [seguente repository github](https://github.com/ingegneria-sistemi-software-m/cargoservice/tree/sprint2/sprint2), dentro alle cartella "system2/" e "iodevices/".
 
 Per avviare il progetto:
@@ -934,12 +931,6 @@ Per avviare il progetto:
 	- se non si ha a disposizione un raspberry si possono lanciare i simulatori con ```./gradlew run```
 
 4. aprire il browser e digitare ```localhost:8090``` per visualizzare l'ambiente virtuale WEnv e il robot che effettua i suoi interventi di carico
-
-
-
-
-
-
 
 ## Sintesi Finale e Nuova Architettura
 
@@ -957,7 +948,19 @@ L'architettura del sistema risultante da questo sprint è suddivisibile in due m
 
 ![iodevicesarch](./iodevicesarch.png)
 
+## Tempo Impiegato e Ripartizione del Lavoro
 
+### Tempo Impiegato
 
-### Tempo impiegato e suddivisione del lavoro
-...
+Lo sprint ha richiesto poche ore in meno del previsto.
+Avevamo previsto di procedere al ritmo di uno sprint alla settimana, e rimarrà così.
+
+### Ripartizione del Lavoro
+
+Non c'è nessuna differenza tra la ripartizione del lavoro in questo sprint e la ripartizione del lavoro nel precedente.
+
+Come previsto, tutti i membri del gruppo hanno partecipato attivamente a tutte le fasi dello sviluppo. Questa modalità organizzativa si è rivelata particolarmente soddisfacente, poiché le principali difficoltà riscontrate durante gli sprint hanno riguardato soprattutto la fase di analisi e progettazione, più che quella di implementazione.  
+
+In questo contesto, si è dimostrato molto efficace affrontare le problematiche attraverso sessioni di brainstorming collettivo. È infatti raro che un singolo componente riesca a cogliere da solo tutte le sfaccettature di una tematica complessa, mentre il confronto tra punti di vista diversi porta spesso alla sintesi di soluzioni condivise, in grado di soddisfare l’intero team.  
+
+Particolarmente utile si è rivelata la necessità di esporre e argomentare le proprie idee fin dalle prime fasi di analisi: il confronto verbale permette di individuare tempestivamente eventuali errori o fraintendimenti, e assicura che il gruppo proceda in maniera coerente, evitando che si consolidino interpretazioni discordanti che potrebbero compromettere il lavoro futuro.
