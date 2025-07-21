@@ -88,7 +88,7 @@ Reply   envmap        : envmap(MAP)  for getenvmap
 
 Context ctx_cargoservice 			ip [host="localhost" port=8000]
 //Context ctx_cargoservice_clients 	ip [host="localhost" port=9000]
-//Context ctx_iodevices 				ip [host="rpi" port=8001]
+Context ctx_iodevices 				ip [host="rpi" port=8001]
 Context ctx_basicrobot     ip [host="my-basicrobot"   port=8020]
 Context ctx_productservice ip [host="cargoserviceqak" port=8111]  
 
@@ -664,7 +664,6 @@ QActor hold context ctx_cargoservice{
 	
 	State s0 initial {
 		println("$name | STARTS - MaxLoad: $MaxLoad kg, Slots: $slots") color yellow
-    
 	}
 	Goto wait_request
 	
@@ -712,6 +711,7 @@ QActor hold context ctx_cargoservice{
             		
 				#]
 				emit hold_update : hold_update($JsonState)
+				updateResource [# JsonState #]
 				replyTo reserve_slot with reserve_slot_success : reserve_slot_success($FreeSlot)
 			}else{
 				println("$name | reservation refused: $Cause") color red
@@ -793,7 +793,7 @@ QActor external_client context ctx_cargoservice{
  		println("$name | STARTS") color cyan
   	} 
   	// commenta entrambi quando vuoi mandare richieste con i test
-//  	Goto work0
+	 	Goto work0
 //  	Goto work1 
   	
   	
