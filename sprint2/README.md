@@ -1,7 +1,17 @@
 # Sprint 2
 
+## Indice
 
-## Punto di partenza
+- [Punto di Partenza](#punto-di-partenza)
+- [Obiettivi](#obiettivi)
+- [Sonar](#sonar)
+- [Hold](#hold)
+- [Progettazione](#progettazione)
+- [Sintesi Finale e Nuova Architettura](#sintesi-finale-e-nuova-architettura)
+- [Tempo Impiegato e Ripartizione del Lavoro](#tempo-impiegato-e-ripartizione-del-lavoro)
+
+## Punto di Partenza
+
 Nello [sprint 1](https://github.com/ingegneria-sistemi-software-m/cargoservice/blob/master/sprint1) si sono implementati i componenti che definiscono il corebuisness del sistema: [_cargoservice_](https://github.com/ingegneria-sistemi-software-m/cargoservice/blob/master/sprint1/README.md#analisi-del-problema--cargoservice) e [_cargorobot_](https://github.com/ingegneria-sistemi-software-m/cargoservice/blob/master/sprint1/README.md#analisi-del-problema--cargorobot). 
 
 Nel far questo si sono anche definite le interfaccie per i componenti _hold_ e _sonar_ da svilupparsi in questo sprint.
@@ -12,31 +22,22 @@ L'architettura del sistema risultante dallo sprint 1 è la seguente.
 
 <div class="page-break"></div>
 
-
 ## Obiettivi
+
 L'obiettivo dello sprint 2 sarà affrontare il sottoinsieme dei requisiti relativi ai componenti _sonar_ e _hold_, effettuando l'analisi del problema e la progettazione. Particolare importanza verrà data alle **interazioni** che questi componenti dovranno avere con il resto del sistema.
-
-
-<!-- togli la roba tra parentesi  -->
 
 I [requisiti](https://github.com/ingegneria-sistemi-software-m/cargoservice/tree/master/requirements) affrontati nello sprint 2 saranno i seguenti:
 - implementare un sistema in grado di rilevare la presenza/assenza di un _container_ presso l'_IO-port_
-    - ( 2. is able to detect (by means of the sonar sensor) the presence of the product container at the ioport )
 - implementare un sistema in grado di rilevare e gestire malfunzionamenti del sonar
-    - ( 5. interrupts any activity and turns on a led if the sonar sensor measures a distance D > DFREE for at least 3 secs (perhaps a sonar failure). The service continues its activities as soon as the sonar measures a distance D <= DFREE. ) 
 - implementare un sistema in grado di tenere traccia dello stato del deposito. Questo include:
     - lo stato libero/occupato di ogni _slot_
     - il peso totale dei container caricati all'interno del deposito
-    - (The request is rejected when:
-            - the product-weight is evaluated too high, since the ship can carry a maximum load of MaxLoad>0  kg.
-            - the hold is already full, i.e. the 4 slots are alrready occupied.)
 - implementare un sistema in grado di condividere con la _web-gui_ (o a qualunque altro componente interessato) lo stato del deposito
-    - (4. is able to show the current state of the hold, by mesans of a dynamically updated web-gui.)
 
+## Sonar
 
+### Analisi del Problema 
 
-
-## Analisi del problema | Sonar
 L'attore _sonar_ è responsabile di effettuare **periodicamente** delle misurazioni di distanze allo scopo di rilevare la presenza dei container che arrivano all'_IO-port_.  
 
 Il tipico ciclo di attività di _sonar_ è il seguente:
@@ -55,21 +56,20 @@ Il tipico ciclo di attività di _sonar_ è il seguente:
     
 4.  solo nel caso in cui la misurazione corrente _m_ abbia portato al passo precedente alla rilevazione di un guasto nel sonar fisico, **_sonar_ cambia di stato** e attende la prima misurazione _m' < DFREE_ prima di tornare ad uno stato di corretto funzionamento. All'arrivo della misurazione _m'_, _sonar_ fa ripartire il resto del sistema **emettendo l'evento 'riprendi_tutto'** introdotto nello sprint 1.
 
-
-
 ### Considerazioni
+
 Il ciclo di attività dell'attore _sonar_ è divisibile in due fasi:
 - fase di recupero della misurazione
 - fase di processamento della misurazione
 
 Risulta quindi possibile separare _sonar_ in **due attori distinti**, uno per fase. Questo porta ad avere come vantaggio il poter **produrre misurazioni fittizzie** sostituendo l'attore che recupera le misurazioni dal sonar fisico con un attore mock, oppure con una test unit, rendendo facilmente testabile la logica di processamento. 
 
-
-
 ### Problematiche
+
 L'analisi fatta fino ad ora fa sorgere le seguenti domande.
 
 #### Come fa _sonar_ a comandare il sonar fisico per ottenere le misurazioni?
+
 Il caro committente ha fornito uno script python che fa proprio questo. Più nel dettaglio, lo script fornito comanda i **pin GPIO** di un **Raspberry PI** a cui il sonar fisico è collegato, ottenendo **una misurazione al secondo**.
 
 ```python
@@ -114,8 +114,8 @@ while True:
     time.sleep(1)
 ```
 
-
 #### Come fa _sonar_ a capire se le misurazioni effettuate negli ultimi 3 secondi sono state consistenti?
+
 È evidente che _sonar_ dovrà mantenere delle informazioni nel suo stato riguardanti le misurazioni precedenti. Più nel dettaglio, _sonar_ avrà bisogno di:
 - una variabile che conta il numero di misurazioni consistenti effettuate.
 - una variabile che indica in quale intervallo è ricaduta la misurazione precedente per capire quale intervallo considerare nel decidere se la misurazione corrente è consistente o meno.
@@ -124,8 +124,8 @@ Siccome le misurazioni vengono effettuate una volta al secondo, se il contatore 
 
 Se una misurazione non è consistente, o se le misurazioni sono state consistenti per 3 secondi, il contatore viene resettato.
 
-
 ### Messaggi
+
 _sonar_ emette tutti gli eventi definiti durante l'analisi di _cargorobot_ fatta nello sprint 1
 
 ```
@@ -141,8 +141,8 @@ Oltre a questi, siccome si è deciso di separare _sonar_ in due attori distinti,
 Event measurement 		: measurement(CM)
 ```
 
+### Modello
 
-### Modello Sonar
 L'analisi fatta fino ha portato al seguente modello.
 
 ```Java
@@ -192,9 +192,6 @@ QActor sonardevice context ctx_iodevices {
 	}
 	Goto readSonarData
 }
-
-
-
 
 QActor measure_processor context ctx_iodevices {
 	import "main.java.IntervalliMisurazioni"
@@ -322,22 +319,199 @@ QActor measure_processor context ctx_iodevices {
 	Goto listen_for_measurement
 }
 ```
-
-
-
-## Piano di test
-
-### Sonar
+### Piano di test
 
 #### Scenario 1: container presente per 3 secondi
 
+```Java
+@Test
+public void testContainerArrived() throws Exception {
+	// versione Java dei waitgroup di Go.
+	// Serve a bloccare il main thread fino a quando 
+	// i child thread non completano
+	CountDownLatch latch = new CountDownLatch(1);
+	// osservo il coap endpoint per ricevere gli eventi di reazione 
+	// agli eventi che genero nel test
+	CoapClient client = new CoapClient(SonarTest.CoapEndopoint);  
+	CoapObserveRelation relation = client.observe(
+		new CoapHandler() {
+			@Override
+			public void onLoad(CoapResponse response) {
+				String content = response.getResponseText();
+				CommUtils.outgreen("ActorObserver | value=" + content );
+				
+				assertTrue("TEST: container_arrived non ricevuto", 
+							content.contains("container_arrived"));
+				
+				latch.countDown();
+			}					
+			@Override
+			public void onError() {
+				CommUtils.outred("OBSERVING FAILED");
+				
+				fail("errore nella osservazione del sonar");
+				
+				latch.countDown();
+			}
+		}
+	);	
+	
+	// container presente per tre misurazioni
+	IApplMessage measurement = 
+		CommUtils.buildEvent("tester", "measurement", "measurement(10)");
+	conn.forward(measurement);
+	conn.forward(measurement);
+	conn.forward(measurement);
+	
+	// Aspetto la risposta del coap endpoint.
+	// latch.await() restituisce false se scade il timeout
+	boolean arrived = latch.await(5, TimeUnit.SECONDS);
+	relation.proactiveCancel();
+	client.shutdown();
+	// verifico anche che il timeout non sia scaduto
+	assertTrue("onLoad non è stato invocato entro il timeout", arrived);
+}
+```
+
 #### Scenario 2: container presente per 3 secondi e poi assente per 3 secondi
+
+```Java
+@Test
+public void testContainerArrivedThenAbsent() throws Exception {
+	// versione Java dei waitgroup di Go.
+	// Serve a bloccare il main thread fino a quando 
+	// i child thread non completano
+	CountDownLatch latch = new CountDownLatch(2);
+	// osservo il coap endpoint per ricevere gli eventi di reazione 
+	// agli eventi che genero nel test
+	CoapClient client = new CoapClient(SonarTest.CoapEndopoint);  
+	CoapObserveRelation relation = client.observe(
+		new CoapHandler() {
+			int counter = 0;
+			@Override
+			public void onLoad(CoapResponse response) {
+				String content = response.getResponseText();
+				CommUtils.outgreen("ActorObserver | value=" + content );
+				
+				if(counter==1) {
+					assertTrue("TEST: container_arrived non ricevuto",
+						content.contains("container_arrived"));
+				}
+				else if(counter==2) {
+					assertTrue("TEST: container_absent non ricevuto 
+						dopo container_arrived",
+						content.contains("container_absent"));
+				}
+				latch.countDown();
+				
+				counter++;
+			}					
+			@Override
+			public void onError() {
+				CommUtils.outred("OBSERVING FAILED");
+				
+				fail();
+				
+				latch.countDown();
+				counter++;
+			}
+		}
+	);	
+	
+	// container presente per tre misurazioni
+	IApplMessage present_measurement = CommUtils.buildEvent("tester",
+										"measurement", "measurement(10)");
+	IApplMessage absent_measurement = CommUtils.buildEvent("tester",
+										"measurement", "measurement(20)");
+	
+	conn.forward(absent_measurement);
+	conn.forward(absent_measurement);
+	conn.forward(absent_measurement);
+	conn.forward(present_measurement);
+	conn.forward(present_measurement);
+	conn.forward(present_measurement);
+	
+	// Aspetto la risposta del coap endpoint.
+	// latch.await() restituisce false se scade il timeout
+	boolean arrived = latch.await(5, TimeUnit.SECONDS);
+	relation.proactiveCancel();
+	client.shutdown();
+	// verifico anche che il timeout non sia scaduto
+	assertTrue("onLoad non è stato invocato entro il timeout", arrived);
+}
+```
 
 #### Scenario 3: rilevazione guasto e ripristino
 
+```Java
+@Test
+public void testFaultySonarAndRecovery() throws Exception {
+	// versione Java dei waitgroup di Go.
+	// Serve a bloccare il main thread fino a quando 
+	// i child thread non completano
+	CountDownLatch latch = new CountDownLatch(2);
+	
+	// osservo il coap endpoint per ricevere gli eventi di reazione 
+	// agli eventi che genero nel test
+	CoapClient client = new CoapClient(SonarTest.CoapEndopoint);  
+	CoapObserveRelation relation = client.observe(
+		new CoapHandler() {
+			int counter = 0;
+			@Override
+			public void onLoad(CoapResponse response) {
+				String content = response.getResponseText();
+				CommUtils.outgreen("ActorObserver | value=" + content );
+				
+				if(counter==0) {
+					assertTrue("TEST: guasto non ricevuto",
+						content.contains("guasto"));
+				}
+				else if(counter==1) {
+					assertTrue("TEST: ripristino non ricevuto",
+						content.contains("ripristinato"));
+				}
+				
+				latch.countDown();
+				
+				counter++;
+			}					
+			@Override
+			public void onError() {
+				CommUtils.outred("OBSERVING FAILED");
+				
+				fail();
+				
+				latch.countDown();
+				counter++;
+			}
+		}
+	);	
+	
+	// container presente per tre misurazioni
+	IApplMessage guasto_measurement = CommUtils.buildEvent("tester",
+										"measurement", "measurement(31)");
+	IApplMessage recovery_measurement = CommUtils.buildEvent("tester",
+										"measurement", "measurement(20)");
+	
+	conn.forward(guasto_measurement);
+	conn.forward(guasto_measurement);
+	conn.forward(guasto_measurement);
+	conn.forward(recovery_measurement);
+
+	
+	// Aspetto la risposta del coap endpoint.
+	// latch.await() restituisce false se scade il timeout
+	boolean arrived = latch.await(5, TimeUnit.SECONDS);
+	relation.proactiveCancel();
+	client.shutdown();
+	// verifico anche che il timeout non sia scaduto
+	assertTrue("onLoad non è stato invocato entro il timeout", arrived);
+}
+```
 Successivamente, si è testato il sonar anche utilizzando i seguenti attori mock.
 
 #### sonar_simul
+
 ```Java
 QActor sonar_simul  context ctx_iodevices{
 	State s0 initial{
@@ -412,6 +586,7 @@ QActor sonar_simul  context ctx_iodevices{
 ```
 
 #### sonar_listener
+
 ```Java
 QActor sonar_listener context ctx_iodevices {
 	State s0 initial{
@@ -458,46 +633,43 @@ QActor sonar_listener context ctx_iodevices {
 }
 ```
 
+## Hold
 
-### Hold
+### Analisi del problema 
 
-## Analisi del problema | Hold
-L'attore _hold_ è responsabile di effettuare dinamicamente la prenotazione degli slot di carico nella stiva, garantendo che la capacità massima della nave MaxLoad non venga superata.  
+L'attore _hold_ è responsabile di effettuare la prenotazione degli slot di carico nella stiva, garantendo che la capacità massima della nave (MaxLoad) non venga superata.  
 
 Il tipico ciclo di attività di _hold_ è il seguente:
 1. _hold_ riceve da _cargoservice_ una richiesta di prenotazione di uno slot.
-2. _hold_ ha il compito di tenere traccia della disponibilità degli slot liberi e del carico cumulativo, in base a ciò valuta la possibilità di effettuare l'intervento di carico. Le casistiche previste sono le seguenti:
+2. _hold_ valuta la possibilità di effettuare l'intervento di carico. Le casistiche previste sono le seguenti:
 	- Se il carico cumulativo (peso del nuovo container + carico attuale nel deposito) supera MaxLoad, non è possibile caricare il container. In tal caso _hold_ risponde a _cargoservice_ con **reserve_slot_fail**
-	- Se il carico cumulativo non supera MaxLoad e non sono presenti slot liberi, anche in questo caso non è possibile caricare il container. In tal caso _hold_ risponde al _cargoservice_ con **reserve_slot_fail** 
-	- Se Il carico cumulativo non supera MaxLoad e vi è almeno uno slot libero è possibile procedere con l'intervento di carico. La risposta al _cargoservice_ sarà **reserve_slot_success_**
+	- Se il carico cumulativo non supera MaxLoad ma non sono presenti slot liberi, anche in questo caso non è possibile caricare il container. In tal caso _hold_ risponde al _cargoservice_ con **reserve_slot_fail** 
+	- Se Il carico cumulativo non supera MaxLoad e vi è almeno uno slot libero è possibile procedere con l'intervento di carico. La risposta a _cargoservice_ sarà **reserve_slot_success_**
 
 ### Considerazioni
-Il ciclo di attività dell'attore _hold_ è divisibile in due fasi:
-- fase di ricezione : Attesa passiva di messaggi (reserve_slot)
-- fase di elaborazione : validazione delle richieste e aggiornamento dello stato interno
 
-Si vuole sottolineare in questa parte che si è evinto dall'analisi dei requisiti che non è necessario implementare la casistica in cui gli slot di _hold_ si liberino.
+Dall'analisi dei requisiti si è evinto che **non è necessario implementare la casistica in cui gli slot di _hold_ si liberino**.
 
-In questa fase si è anche svolto una valutazione relativa al legame tra _hold_ e la componente _web-GUI_. Dall'analisi dei requisiti è risultato chiaro che questi due componenti devono interagire.In particolare, la web-gui deve recuperare lo stato mantenuto da _hold_ e ricevere da quest'ultimo aggiornamenti periodici. Per questo motivo, il comportamento dell'attore _hold_ è anche in grado di:
+Si può notare un legame tra _hold_ e il componente _web-gui_. Già dall'analisi dei requisiti è risultato chiaro che questi due componenti dovessero interagire; ora che si è esplicitata la sequenza di attività di hold. questo è ancora più chiaro.
+
+In particolare, la web-gui deve recuperare lo stato della stiva mantenuto da _hold_ e ricevere da quest'ultimo aggiornamenti periodici quando questo stato viene modificato. _hold_ è quindi anche in grado di:
 1. Rispondere a query riguardanti il suo stato
 2. Emettere eventi di aggiornamento quando il suo stato subisce una modifica
 
-
-
 ### Messaggi
+
 ```
-Request reserve_slot         : reserve_slot(WEIGHT) 			    	   "richiesta verso hold per prenotare uno slot. Contiene il peso del prodotto da caricare"
-Reply   reserve_slot_success : reserve_slot_success(SLOT) for reserve_slot "se la richiesta è soddisfacibile, hold restituisce il nome/id dello slot prenotato"
-Reply   reserve_slot_fail    : reserve_slot_fail(CAUSA) for reserve_slot   "fallisce se il peso supera MaxLoad oppure se non c'è uno slot libero"
+Request reserve_slot         : reserve_slot(WEIGHT) 			    	   
+Reply   reserve_slot_success : reserve_slot_success(SLOT) for reserve_slot 
+Reply   reserve_slot_fail    : reserve_slot_fail(CAUSA) for reserve_slot   
 
-Request get_hold_state		 : get_hold_state(X)						   "richiesta verso hold per conoscere lo stato iniziale del deposito.Contiene il peso attuale e lo stato degli slot"
-Reply   hold_state			 : hold_state(JSonString)					   "risposta verso gui da parte di hold con le informazioni interne del deposito"
+Request get_hold_state		 : get_hold_state(X)						   
+Reply   hold_state			 : hold_state(JSonString) for get_hold_state				   
 
-Event	hold_update			 : hold_update(JSonString)					   "evento che avvisa di un cambiamento nello stato interno di hold"
+Event	hold_update			 : hold_update(JSonString)					   
 ```
 
-
-### Modello Hold
+### Modello
 
 L'analisi fatta finora ha portato al seguente modello.
 
@@ -600,9 +772,7 @@ QActor hold context ctx_cargoservice{
 	Goto wait_request
 }
 ```
-## Piano di test
-
-### Hold
+## Piano di test 
 
 #### Scenario 1: Test prenotazione riuscita 
 
@@ -624,8 +794,8 @@ QActor hold context ctx_cargoservice{
                  response.contains("reserve_slot_success"));
     }
 ```
-#### Scenario 2: Test intervento di carico rifiutato per superamento di MaxLoad
 
+#### Scenario 2: Test intervento di carico rifiutato per superamento di MaxLoad
 
 ```text
 @Test
@@ -648,7 +818,6 @@ QActor hold context ctx_cargoservice{
 ```
 
 #### Scenario 3: Prenotazione fallita data da nessuno slot libero
-
 
 ```text
  @Test
@@ -687,7 +856,6 @@ QActor hold context ctx_cargoservice{
 
 #### Scenario 4: Richiesta dello stato corrente del deposito
 
-
 ```text
 @Test
     public void testGetHoldState() throws Exception {
@@ -709,7 +877,6 @@ QActor hold context ctx_cargoservice{
 ```
 
 #### Scenario 5: Verifica aggiornamento dello stato dopo una prenotazione
-
 
 ```text
 @Test
@@ -746,9 +913,54 @@ QActor hold context ctx_cargoservice{
     }
 ```
 
-
 ## Progettazione
 
+Come per lo sprint 1 la modellazione tramite il DSL QAK ha prodotto dei modelli eseguibili. In questo caso, non c'è stato addirittura bisogno di una fase di progettazione. I componenti modellati sono già soddifacenti nella loro forma da modello eseguibile.   
 
-### sonar
-non ha bisogno di progettazione
+### Deployment
+
+I modelli QAK sviluppati in questo sprint sono recuperabile alla [seguente repository github](https://github.com/ingegneria-sistemi-software-m/cargoservice/tree/sprint2/sprint2), dentro alle cartella "system2/" e "iodevices/".
+
+Per avviare il progetto:
+1. eseguire ```docker compose -f arch2.yaml up``` per lanciare i componenti relativi alla logica di buisness del sistema
+
+2. aggiungere qualche prodotto al db mongo appena avviato, eseguendo con node lo script [setupmongo.js](https://github.com/ingegneria-sistemi-software-m/cargoservice/blob/master/setup_mongo.js)
+
+3. nel lanciare i componenti relativi ai dispositivi di I/O si hanno due alternative 
+	- se si ha a disposizione un raspberry pi, e quindi dei dispositivi fisici da comandare, si può copiare la distribuzione ottenuta con ```./gradlew run``` all'interno del raspberry e lanciarla al suo interno
+	- se non si ha a disposizione un raspberry si possono lanciare i simulatori con ```./gradlew run```
+
+4. aprire il browser e digitare ```localhost:8090``` per visualizzare l'ambiente virtuale WEnv e il robot che effettua i suoi interventi di carico
+
+## Sintesi Finale e Nuova Architettura
+
+In questo sprint si sono implementati i componenti: [sonar](#analisi-del-problema--sonar) e [hold](#analisi-del-problema--hold). Grazie al primo, è diventato possibile rilevare la presenza/assenza dei container, grazie al secondo è diventato possibile gestire lo stato del deposito completando in questa maniera la logica del sistema.
+
+Durante l'analisi del componente Hold si sono anche definiti i messaggi che quest'ultimo dovrà scambiarsi con la web-gui, componente che si implementerà nello sprint 3.
+
+L'architettura del sistema risultante da questo sprint è suddivisibile in due macrocontesti.
+
+#### Servizio principale
+
+![arch2](./arch2.png)
+
+#### Dispositivi di I/O
+
+![iodevicesarch](./iodevicesarch.png)
+
+## Tempo Impiegato e Ripartizione del Lavoro
+
+### Tempo Impiegato
+
+Lo sprint ha richiesto poche ore in meno del previsto.
+Avevamo previsto di procedere al ritmo di uno sprint alla settimana, e rimarrà così.
+
+### Ripartizione del Lavoro
+
+Non c'è nessuna differenza tra la ripartizione del lavoro in questo sprint e la ripartizione del lavoro nel precedente.
+
+Come previsto, tutti i membri del gruppo hanno partecipato attivamente a tutte le fasi dello sviluppo. Questa modalità organizzativa si è rivelata particolarmente soddisfacente, poiché le principali difficoltà riscontrate durante gli sprint hanno riguardato soprattutto la fase di analisi e progettazione, più che quella di implementazione.  
+
+In questo contesto, si è dimostrato molto efficace affrontare le problematiche attraverso sessioni di brainstorming collettivo. È infatti raro che un singolo componente riesca a cogliere da solo tutte le sfaccettature di una tematica complessa, mentre il confronto tra punti di vista diversi porta spesso alla sintesi di soluzioni condivise, in grado di soddisfare l’intero team.  
+
+Particolarmente utile si è rivelata la necessità di esporre e argomentare le proprie idee fin dalle prime fasi di analisi: il confronto verbale permette di individuare tempestivamente eventuali errori o fraintendimenti, e assicura che il gruppo proceda in maniera coerente, evitando che si consolidino interpretazioni discordanti che potrebbero compromettere il lavoro futuro.

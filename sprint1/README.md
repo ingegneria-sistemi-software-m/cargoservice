@@ -10,6 +10,7 @@
 - [Piano di Test](#piano-di-test)
 - [Progettazione](#progettazione)
 - [Sintesi Finale e Nuova Architettura](#sintesi-finale-e-nuova-architettura)
+- [Tempo Impiegato e Ripartizione del Lavoro](#tempo-impiegato-e-ripartizione-del-lavoro)
 
 ## Punto di Partenza
 
@@ -925,7 +926,19 @@ L'architettura del sistema risultante da questo sprint è la seguente.
 ![arch1](./arch1.png)
 
 
+## Tempo Impiegato e Ripartizione del Lavoro
 
+## Tempo Impiegato
 
-### Tempo impiegato e ripartizione del lavoro
-...
+Lo sprint ha richiesto poche ore in più del previsto e abbiamo presentato il lavoro lunedì 14/07 invece che venerdì 11/07, come preventivato.
+Complessivamente questo non rappresenta un problema per l'andamento complessivo del lavoro.
+Avevamo previsto di procedere al ritmo di uno sprint alla settimana, e rimarrà così.
+Presenteremo il lavoro ogni lunedì invece che ogni venerdì, indicativamente.
+
+## Ripartizione del Lavoro
+
+Come previsto, tutti i membri del gruppo hanno partecipato attivamente a tutte le fasi dello sviluppo. Questa modalità organizzativa si è rivelata particolarmente soddisfacente, poiché le principali difficoltà riscontrate durante gli sprint hanno riguardato soprattutto la fase di analisi e progettazione, più che quella di implementazione.  
+
+In questo contesto, si è dimostrato molto efficace affrontare le problematiche attraverso sessioni di brainstorming collettivo. È infatti raro che un singolo componente riesca a cogliere da solo tutte le sfaccettature di una tematica complessa, mentre il confronto tra punti di vista diversi porta spesso alla sintesi di soluzioni condivise, in grado di soddisfare l’intero team.  
+
+Particolarmente utile si è rivelata la necessità di esporre e argomentare le proprie idee fin dalle prime fasi di analisi: il confronto verbale permette di individuare tempestivamente eventuali errori o fraintendimenti, e assicura che il gruppo proceda in maniera coerente, evitando che si consolidino interpretazioni discordanti che potrebbero compromettere il lavoro futuro.
