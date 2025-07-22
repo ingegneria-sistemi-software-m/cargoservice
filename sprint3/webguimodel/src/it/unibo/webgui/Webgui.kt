@@ -33,8 +33,8 @@ class Webgui ( name: String, scope: CoroutineScope, isconfined: Boolean=false, i
 		        var CurrentState = "{}"
 		
 		        fun stateUpdate(json: String){
-		            currentState = json
-		            println("Hold State: $currentState") 
+		            CurrentState = json
+		            println("Hold State: $CurrentState") 
 		        }
 		return { //this:ActionBasciFsm
 				state("init") { //this:State

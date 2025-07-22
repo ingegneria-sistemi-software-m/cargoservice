@@ -21,8 +21,8 @@ QActor webgui context ctx_webgui {
         var CurrentState = "{}"
 
         fun stateUpdate(json: String){
-            currentState = json
-            println("Hold State: $currentState") 
+            CurrentState = json
+            println("Hold State: $CurrentState") 
         }
     #]
 
