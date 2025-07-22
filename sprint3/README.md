@@ -32,9 +32,29 @@ Il [requisito](https://github.com/ingegneria-sistemi-software-m/cargoservice/tre
 
 ## Analisi del Problema 
 
+
+
 ## Progettazione
 
+
+
 ## Sintesi Finale e Nuova Architettura
+
+In questo sprint si sono implementati i componenti: [led](#analisi-del-problema--led) e [webgui](#analisi-del-problema--webgui). Grazie al primo, è diventato possibile segnalare la presenza di un malfunzionamento del sonar, grazie al secondo è diventato possibile visualizzare lo stato degli slot e il peso complessivo dei container nel deposito.
+
+L'architettura del sistema risultante da questo sprint è definisce il nuovo macrocontesto della webgui.
+
+### Servizio principale
+
+![arch3](./arch3.png)
+
+### Dispositivi di I/O
+
+![iodevicesarch](./iodevicesarch.png)
+
+### WebGui
+
+![]() //immagine ancora da fare sulla webgui
 
 ## Tempo Impiegato e Ripartizione del Lavoro
 
