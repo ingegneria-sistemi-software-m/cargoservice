@@ -104,6 +104,8 @@ class Hold ( name: String, scope: CoroutineScope, isconfined: Boolean=false, isd
 													val JsonState = getHoldStateJson()
 								            		
 								emit("hold_update", "hold_update($JsonState)" ) 
+								updateResourceRep( JsonState  
+								)
 								answer("reserve_slot", "reserve_slot_success", "reserve_slot_success($FreeSlot)"   )  
 								}
 								else

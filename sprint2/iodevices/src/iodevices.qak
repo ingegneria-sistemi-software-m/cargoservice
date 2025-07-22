@@ -262,25 +262,25 @@ QActor measure_processor context ctx_iodevices {
 
 
 
-//QActor led context ctx_iodevices {
-//	State s0 initial{
-//	}
-//	Goto spento
-//	
-//	State spento {
-//		println("$name | sono spento") color red
+QActor led context ctx_iodevices {
+	State s0 initial{
+	}
+	Goto spento
+	
+	State spento {
+		println("$name | sono spento") color red
 //		[# machineExec("python ledPython25Off.py") #]
-//	}
-//	Transition t0
-//		whenEvent interrompi_tutto -> acceso
-//	
-//	State acceso {
-//		println("$name | sono acceso") color green
+	}
+	Transition t0
+		whenEvent interrompi_tutto -> acceso
+	
+	State acceso {
+		println("$name | sono acceso") color green
 //		[# machineExec("python ledPython25On.py") #]
-//	}
-//	Transition t0
-//		whenEvent riprendi_tutto -> spento
-//}
+	}
+	Transition t0
+		whenEvent riprendi_tutto -> spento
+}
 
 
 

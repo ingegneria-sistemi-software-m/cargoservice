@@ -36,7 +36,7 @@ public class HoldResponseParser {
                 payload.put("slots", slotStatusList);
                 
             } else {
-                System.err.println("Formato non valido.");
+                System.err.println("Formato non valido -> msg received: " + message);
             }
     		return payload;
            

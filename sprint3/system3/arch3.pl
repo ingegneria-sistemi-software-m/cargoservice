@@ -50,6 +50,7 @@ request( getenvmap, getenvmap(X) ).
 reply( envmap, envmap(MAP) ).  %%for getenvmap
 %====================================================================================
 context(ctx_cargoservice, "localhost",  "TCP", "8000").
+context(ctx_iodevices, "127.0.0.1",  "TCP", "8001").
 context(ctx_basicrobot, "my-basicrobot",  "TCP", "8020").
 context(ctx_productservice, "cargoserviceqak",  "TCP", "8111").
  qactor( basicrobot, ctx_basicrobot, "external").

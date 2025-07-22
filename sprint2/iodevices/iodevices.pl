@@ -13,5 +13,7 @@ context(ctx_cargoservice, "127.0.0.1",  "TCP", "8000").
  static(sonarsimul).
   qactor( measure_processor, ctx_iodevices, "it.unibo.measure_processor.Measure_processor").
  static(measure_processor).
+  qactor( led, ctx_iodevices, "it.unibo.led.Led").
+ static(led).
   qactor( sonar_listener, ctx_iodevices, "it.unibo.sonar_listener.Sonar_listener").
  static(sonar_listener).

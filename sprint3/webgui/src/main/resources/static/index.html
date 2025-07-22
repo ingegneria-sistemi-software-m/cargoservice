@@ -147,7 +147,6 @@
         
         //Funzione per connettersi al WebSocket
         function connectWebSocket() {
-			
 			const socketUrl = "ws://" + window.location.host + "/status-updates";
             
             //Crea la connessione WebSocket
@@ -226,6 +225,7 @@
       
         window.onload = function() {
             connectWebSocket();
+			// TODO: fai la prima richiesta per ottenere lo stato iniziale
         };
     </script>
 </body>

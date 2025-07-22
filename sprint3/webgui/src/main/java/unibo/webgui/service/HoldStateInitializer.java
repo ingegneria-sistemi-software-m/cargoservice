@@ -32,6 +32,9 @@ public class HoldStateInitializer {
             if (payload != null) {
                 wsHandler.sendToAll(payload.toString());
             }
+            else {
+            	System.out.println("il payload è nullo???");
+            }
 
         } catch (Exception e) {
             System.err.println("Errore HoldStateInitializer: " + e.getMessage());

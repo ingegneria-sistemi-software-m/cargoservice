@@ -42,7 +42,6 @@ class Led ( name: String, scope: CoroutineScope, isconfined: Boolean=false, isdy
 				state("spento") { //this:State
 					action { //it:State
 						CommUtils.outred("$name | sono spento")
-						 machineExec("python ledPython25Off.py")  
 						//genTimer( actor, state )
 					}
 					//After Lenzi Aug2002
@@ -53,7 +52,6 @@ class Led ( name: String, scope: CoroutineScope, isconfined: Boolean=false, isdy
 				state("acceso") { //this:State
 					action { //it:State
 						CommUtils.outgreen("$name | sono acceso")
-						 machineExec("python ledPython25On.py")  
 						//genTimer( actor, state )
 					}
 					//After Lenzi Aug2002

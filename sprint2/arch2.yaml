@@ -86,15 +86,15 @@ services:
 
   
   
-  arch2:
-    container_name: arch2
-    image: koltrakak/arch2
-    mem_limit: 512m
-    ports:
-      - "8000:8000/tcp"
-      - "8000:8000/udp"
-    networks:
-      - iss-network
+  # arch2:
+  #   container_name: arch2
+  #   image: koltrakak/arch2
+  #   mem_limit: 512m
+  #   ports:
+  #     - "8000:8000/tcp"
+  #     - "8000:8000/udp"
+  #   networks:
+  #     - iss-network
 
 networks:
   iss-network:
