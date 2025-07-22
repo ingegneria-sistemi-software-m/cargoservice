@@ -650,11 +650,27 @@ Il tipico ciclo di attività di _hold_ è il seguente:
 
 Dall'analisi dei requisiti si è evinto che **non è necessario implementare la casistica in cui gli slot di _hold_ si liberino**.
 
-Si può notare un legame tra _hold_ e il componente _web-gui_. Già dall'analisi dei requisiti è risultato chiaro che questi due componenti dovessero interagire; ora che si è esplicitata la sequenza di attività di hold. questo è ancora più chiaro.
+Successivamente, si può notare un legame tra _hold_ e il componente _web-gui_. Dall'analisi dei requisiti è risultato chiaro che la web-gui dovesse in qualche modo recuperare lo stato del deposito per poterlo mostrare agli utenti. In particolare, la web-gui deve recuperare lo stato della stiva e ricevere aggiornamenti periodici quando quest'ultimo viene modificato.
 
-In particolare, la web-gui deve recuperare lo stato della stiva mantenuto da _hold_ e ricevere da quest'ultimo aggiornamenti periodici quando questo stato viene modificato. _hold_ è quindi anche in grado di:
-1. Rispondere a query riguardanti il suo stato
-2. Emettere eventi di aggiornamento quando il suo stato subisce una modifica
+Sarà quindi necessario prevedere dei messaggi per:
+1. effettuare query sullo stato del deposito e le relative risposte
+<!-- l'evento lo lascio perchè concettualmente una updateResource CoAP è un evento,
+ in progettazione specifico che usiamo appunto updateResource -->
+2. eventi di aggiornamento quando lo stato del deposito subisce una modifica
+
+Nella nostra modellazione è _hold_ a mantenere le informazioni riguardanti lo stato del deposito. Tuttavia, _hold_ **è un componente interno del sistema**, non sarebbe quindi opportuno esporlo al mondo esterno quando, dall'analisi dei requisiti e dall'analisi del problema effettuata nello sprint1, si è concluso che è _cargoservice_ il servizio di frontend del sistema. Per questo motivo, si può concludere che le query riguardanti lo stato del deposito dovranno passare prima da _cargoservice_. Quest'ultimo ne potrà delegare la gestione ad _hold_.
+
+
+### Problematiche
+L'analisi fatta fino ad ora evidenzia la seguente problematica.
+
+#### Come viene salvato lo stato del deposito? 
+L'alternativa più semplice è mantenere lo stato del deposito in memoria tramite delle variabili dell'attore _hold_. Questa possibilità ha come difetto la totale assenza di **gestione della persistenza**; se l'attore hold smette di eseguire, volontariamente o a causa di un imprevisto, lo stato del deposito mantenuto fino a quel punto viene perso.
+
+Si potrebbe quindi gestire la persistenza tramite un database, o più semplicemente con un file (vi sono pochi dati da salvare). Già in fase di analisi si decide però che questo non sarà necessario in quanto questo **requisito non è stato specificato dal committente nel documento dei requisiti**. 
+
+Sarà obiettivo di un futuro sprint implementare la gestione della persistenza se il committente aggiungerà mai questo requisito.
+
 
 ### Messaggi
 
@@ -772,6 +788,27 @@ QActor hold context ctx_cargoservice{
 	Goto wait_request
 }
 ```
+
+Inoltre, si ha che _cargoservice_ delega le query sullo stato del deposito ad _hold_.
+
+```Java
+
+QActor cargoservice context ctx_cargoservice {
+	State s0 initial{
+		println("$name | STARTS") color blue
+		
+		delay 2000 //attende creazione attori locali a cui delegare
+
+		// cargoservice è il mio microservizio di frontend
+		// delega le query sullo stato al microservizio hold
+		delegate get_hold_state to hold
+	} 
+	Goto wait_request
+
+	...
+}
+```
+
 ## Piano di test 
 
 #### Scenario 1: Test prenotazione riuscita 
@@ -915,9 +952,52 @@ QActor hold context ctx_cargoservice{
 
 ## Progettazione
 
-Come per lo sprint 1 la modellazione tramite il DSL QAK ha prodotto dei modelli eseguibili. In questo caso, non c'è stato addirittura bisogno di una fase di progettazione. I componenti modellati sono già soddifacenti nella loro forma da modello eseguibile.   
+Come per lo sprint 1 la modellazione tramite il DSL QAK ha prodotto dei modelli già eseguibili, la fase di progettazione risulta nuovamente notevolmente ridotta se non per due questioni.
 
-### Deployment
+### Entità esterne
+Durante l'analisi del problema si sono modellati gli aggiornamenti che _hold_ emette quando lo stato del deposito subisce una modifica come eventi. Questo è soddisfacente a patto che le entità interessate a questi eventi siano anche esse attori QAK, entità esterne (aliene) al mondo QAK non saprebbero come ricevere questi eventi. Siccome è presumibile che anche entità "aliene" siano interessate agli eventi di aggiornamento dello stato del deposito, bisogna rendere questi eventi fruibili anche al di fuori del mondo QAK.
+
+L'infrastruttura QAK offre due alternative: MQTT e CoAP. Si è deciso di utilizzare il protocollo CoAP e non MQTT in maniera tale da non introdurre un broker MQTT come componente aggiuntivo del sistema. 
+
+A questo punto l'attore _hold_ può essere **osservato dalle entità esterne come qualsiasi altra risorsa CoAP**. _hold_ aggiorna gli osservatori esterni mediante la primitiva _'updateResource'_ del linguaggio QAK.
+
+```Java
+State check_reservation{
+	println("$name | checking reservation request") color yellow
+	
+	onMsg(reserve_slot : reserve_slot(WEIGHT)){
+		[#
+			...
+		#]
+
+		if [# FreeSlot != null #]{
+			println("$name | reserving $FreeSlot for weight $weight") 
+			[# 
+				slots[FreeSlot] = false
+				currentLoad += weight
+				val JsonState = getHoldStateJson()
+				val JsonMsg = "'$JsonState'"
+			#]
+			emit hold_update : hold_update($JsonMsg)
+			// aggiorno gli osservatori esterni
+			updateResource [# JsonState #] 
+
+			replyTo reserve_slot with reserve_slot_success :
+									  reserve_slot_success($FreeSlot)
+		}else{
+			println("$name | reservation refused: $Cause") color red
+			replyTo reserve_slot with reserve_slot_fail :
+									  reserve_slot_fail($Cause)
+		}
+	}
+}
+Goto wait_request
+```
+
+
+
+
+## Deployment
 
 I modelli QAK sviluppati in questo sprint sono recuperabile alla [seguente repository github](https://github.com/ingegneria-sistemi-software-m/cargoservice/tree/sprint2/sprint2), dentro alle cartella "system2/" e "iodevices/".
 

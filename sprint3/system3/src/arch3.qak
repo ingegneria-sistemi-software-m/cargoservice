@@ -88,7 +88,7 @@ Reply   envmap        : envmap(MAP)  for getenvmap
 
 Context ctx_cargoservice 			ip [host="localhost" port=8000]
 //Context ctx_cargoservice_clients 	ip [host="localhost" port=9000]
-Context ctx_iodevices 				ip [host="127.0.0.1" port=8001]
+//Context ctx_iodevices 				ip [host="127.0.0.1" port=8001]
 Context ctx_basicrobot     ip [host="my-basicrobot"   port=8020]
 Context ctx_productservice ip [host="cargoserviceqak" port=8111]  
 
@@ -108,9 +108,10 @@ QActor cargoservice context ctx_cargoservice {
 	State s0 initial{
 		println("$name | STARTS") color blue
 		
-		[#
-			// inizializzo lo stato 
-		#]
+		delay 2000 //attende creazione attori locali a cui delegare
+		// cargoservice è il mio microservizio di frontend
+		// delega le query sullo stato al microservizio hold
+		delegate get_hold_state to hold
 	} 
 	Goto wait_request
 	

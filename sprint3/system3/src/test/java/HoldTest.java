@@ -68,7 +68,7 @@ public class HoldTest {
     public void testGetHoldState() throws Exception {
         String requestStr = CommUtils.buildRequest("tester",
                 "get_hold_state", "get_hold_state(X)", 
-                "hold").toString();
+                "cargoservice").toString();
         
         System.out.println("Richiesta Test 4: " + requestStr);
         

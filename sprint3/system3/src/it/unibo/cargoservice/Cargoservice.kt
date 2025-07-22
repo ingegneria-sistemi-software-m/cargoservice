@@ -36,8 +36,8 @@ class Cargoservice ( name: String, scope: CoroutineScope, isconfined: Boolean=fa
 				state("s0") { //this:State
 					action { //it:State
 						CommUtils.outblue("$name | STARTS")
-						
-									// inizializzo lo stato 
+						delay(2000) 
+						delegate("get_hold_state", "hold") 
 						//genTimer( actor, state )
 					}
 					//After Lenzi Aug2002
