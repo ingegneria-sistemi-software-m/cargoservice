@@ -30,10 +30,10 @@ class Webgui ( name: String, scope: CoroutineScope, isconfined: Boolean=false, i
 		//val interruptedStateTransitions = mutableListOf<Transition>()
 		//IF actor.withobj !== null val actor.withobj.name» = actor.withobj.method»ENDIF
 		
-		        var currentState = "{}"
+		        var CurrentState = "{}"
 		
 		        fun stateUpdate(json: String){
-		            currentState = json
+		            CurrentState = json
 		            println("UPDATE RECEIVED: $json") 
 		        }
 		return { //this:ActionBasciFsm
@@ -56,7 +56,6 @@ class Webgui ( name: String, scope: CoroutineScope, isconfined: Boolean=false, i
 						            val receivedState = payloadArg(0)
 						            println("$name | initial hold state: $receivedState") 
 						            stateUpdate(receivedState)
-						
 						//genTimer( actor, state )
 					}
 					//After Lenzi Aug2002
@@ -66,7 +65,7 @@ class Webgui ( name: String, scope: CoroutineScope, isconfined: Boolean=false, i
 				}	 
 				state("listening") { //this:State
 					action { //it:State
-						CommUtils.outblack("$name | waiting for MQTT messages on topic 'holdGuiUpdate'")
+						CommUtils.outblack("$name | waiting for hold updates")
 						//genTimer( actor, state )
 					}
 					//After Lenzi Aug2002
@@ -83,6 +82,8 @@ class Webgui ( name: String, scope: CoroutineScope, isconfined: Boolean=false, i
 									            println("$name | hold update received: $UpdateJson") 
 									            stateUpdate(UpdateJson)
 									
+								updateResourceRep( CurrenState  
+								)
 						}
 						//genTimer( actor, state )
 					}

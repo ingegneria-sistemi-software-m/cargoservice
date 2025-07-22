@@ -13,10 +13,10 @@ ExternalQActor cargoservice context ctx_cargoservice
 
 QActor webgui context ctx_webgui {
     [#
-        var currentState = "{}"
+        var CurrentState = "{}"
 
         fun stateUpdate(json: String){
-            currentState = json
+            CurrentState = json
             println("UPDATE RECEIVED: $json") 
         }
     #]
@@ -38,7 +38,6 @@ QActor webgui context ctx_webgui {
             val receivedState = payloadArg(0)
             println("$name | initial hold state: $receivedState") 
             stateUpdate(receivedState)
-
         #]
         
     }
@@ -59,6 +58,7 @@ QActor webgui context ctx_webgui {
 	            stateUpdate(UpdateJson)
 	
 	        #]
+	        updateResource[# CurrenState #]
         }
     }
     Goto listening
