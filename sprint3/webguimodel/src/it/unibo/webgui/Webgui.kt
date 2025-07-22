@@ -42,7 +42,7 @@ class Webgui ( name: String, scope: CoroutineScope, isconfined: Boolean=false, i
 						delay(1000) 
 						CommUtils.outblack("$name | START")
 						CommUtils.outblack("$name | getting hold state for the first time")
-						request("get_hold_state", "get_hold_state(si)" ,"hold" )  
+						request("get_hold_state", "get_hold_state(si)" ,"cargoservice" )  
 						//genTimer( actor, state )
 					}
 					//After Lenzi Aug2002
@@ -76,11 +76,14 @@ class Webgui ( name: String, scope: CoroutineScope, isconfined: Boolean=false, i
 				}	 
 				state("update_webgui") { //this:State
 					action { //it:State
-						
-						            val updateJson = payloadArg(0)
-						            println("$name | hold update received: $updateJson") 
-						            stateUpdate(updateJson)
-						
+						if( checkMsgContent( Term.createTerm("hold_update(JSonString)"), Term.createTerm("hold_update(JSON)"), 
+						                        currentMsg.msgContent()) ) { //set msgArgList
+								
+									            var UpdateJson = payloadArg(0)
+									            println("$name | hold update received: $UpdateJson") 
+									            stateUpdate(UpdateJson)
+									
+						}
 						//genTimer( actor, state )
 					}
 					//After Lenzi Aug2002
