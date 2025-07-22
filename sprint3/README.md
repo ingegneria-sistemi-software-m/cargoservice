@@ -25,6 +25,11 @@ L'architettura del sistema risultante da questo sprint è suddivisibile in due m
 
 ## Obiettivi
 
+L'obiettivo dello sprint 3 sarà affrontare il sottoinsieme dei requisiti relativi ai componenti _webgui_ e _led_, effettuando l'analisi del problema e la progettazione. Particolare importanza verrà data alle **interazioni** che questi componenti dovranno avere con il resto del sistema.
+
+Il [requisito](https://github.com/ingegneria-sistemi-software-m/cargoservice/tree/master/requirements) principale affrontato nello sprint 3 è il seguente:
+- is able to show the current state of the hold, by means of a dynamically updated web-gui.
+
 ## Analisi del Problema 
 
 ## Progettazione
