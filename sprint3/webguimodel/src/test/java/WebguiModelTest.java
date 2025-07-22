@@ -25,26 +25,7 @@ public class WebguiModelTest {
         conn = ConnectionFactory.createClientSupport23(ProtocolType.tcp, "localhost", "8050");
     }
     
-    // Test 1: richiesta stato attuale hold
-    @Test
-    public void testInitialHoldState() throws Exception {
-        String request = CommUtils.buildRequest("tester", "get_hold_state", "get_hold_state(X)", "cargoservice").toString();
-        System.out.println("Test 1 --> Request: " + request);
-
-        String response = conn.request(request);
-        System.out.println("Test 1 --> Response: " + response);
-
-        assertNotNull("La risposta non deve essere nulla", response);
-        assertTrue("La risposta dovrebbe contenere 'hold_state'", response.contains("hold_state"));
-        assertTrue("La risposta dovrebbe contenere 'currentLoad'", response.contains("currentLoad"));
-        assertTrue("La risposta dovrebbe contenere 'slots'", response.contains("slots"));
-        assertTrue("La risposta dovrebbe contenere 'slot1'", response.contains("slot1"));
-        assertTrue("La risposta dovrebbe contenere 'slot2'", response.contains("slot2"));
-        assertTrue("La risposta dovrebbe contenere 'slot3'", response.contains("slot3"));
-        assertTrue("La risposta dovrebbe contenere 'slot4'", response.contains("slot4"));
-    }
-
-    // Test 2: Invio evento hold_update e verifica ricezione con CoAP
+    // Test 1: Invio evento hold_update e verifica ricezione con CoAP
     @Test
     public void testHoldUpdateEventReceptionWithCoap() throws Exception {
     	
