@@ -18,11 +18,11 @@ import unibo.basicomm23.utils.ConnectionFactory;
 public class WebguiModelTest {
 
     private static Interaction conn;
-    private static final String COAP_ENDPOINT = "coap://localhost:8000/webgui/holdstate";
+    private static final String COAP_ENDPOINT = "coap://localhost:8050/webgui/holdstate";
 
     @BeforeClass
     public static void setup() {
-        conn = ConnectionFactory.createClientSupport23(ProtocolType.tcp, "localhost", "8000");
+        conn = ConnectionFactory.createClientSupport23(ProtocolType.tcp, "localhost", "8050");
     }
     
     // Test 1: richiesta stato attuale hold
@@ -57,7 +57,7 @@ public class WebguiModelTest {
             @Override
             public void onLoad(CoapResponse response) {
                 String content = response.getResponseText();
-                System.out.println("CoAP notification received: " + content);
+                System.out.println("CoAP notification received: " + response);
 
                 // Controllo se il messaggio contiene il carico aggiornato
                 if (content.contains("\"currentLoad\":100" ) && content.contains("\"slot1\":occupied")) {

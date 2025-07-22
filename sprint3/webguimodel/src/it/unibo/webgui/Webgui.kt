@@ -82,16 +82,12 @@ class Webgui ( name: String, scope: CoroutineScope, isconfined: Boolean=false, i
 				state("update_webgui") { //this:State
 					action { //it:State
 						CommUtils.outred("$name | update $currentMsg")
-						if( checkMsgContent( Term.createTerm("hold_update(JSonString,TERM)"), Term.createTerm("hold_update(JSON)"), 
-						                        currentMsg.msgContent()) ) { //set msgArgList
-								
-									            var UpdateJson = payloadArg(0)
-									            println("$name | hold update received: $UpdateJson") 
-									            stateUpdate(UpdateJson)
-									
-								updateResourceRep( CurrenState  
-								)
-						}
+						
+						            var UpdateJson = payloadArg(0)
+						            println("$name | hold update received: $UpdateJson") 
+						            stateUpdate(UpdateJson)
+						updateResourceRep( CurrentState  
+						)
 						//genTimer( actor, state )
 					}
 					//After Lenzi Aug2002

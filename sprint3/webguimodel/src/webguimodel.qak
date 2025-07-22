@@ -70,16 +70,14 @@ QActor webgui context ctx_webgui {
    State update_webgui {
    		println("$name | update $currentMsg") color red 
    		
-   		// a quanto pare questo sotto non funziona e quindi usiamo solo la stampa di sopra
-   		onMsg( hold_update : hold_update(JSON) ) {
-	        [#
-	            var UpdateJson = payloadArg(0)
-	            println("$name | hold update received: $UpdateJson") 
-	            stateUpdate(UpdateJson)
-	
-	        #]
-	        updateResource[# CurrenState #]
-        }
+		[#
+            var UpdateJson = payloadArg(0)
+            println("$name | hold update received: $UpdateJson") 
+            stateUpdate(UpdateJson)
+        #]
+
+        // per il test
+        updateResource [# CurrentState #]
     }
     Goto listening
 }
