@@ -28,18 +28,28 @@ L'architettura del sistema risultante da questo sprint è suddivisibile in due m
 
 L'obiettivo dello sprint 3 sarà affrontare il sottoinsieme dei requisiti relativi ai componenti _webgui_ e _led_, effettuando l'analisi del problema e la progettazione. Particolare importanza verrà data alle **interazioni** che questi componenti dovranno avere con il resto del sistema.
 
-Il [requisito](https://github.com/ingegneria-sistemi-software-m/cargoservice/tree/master/requirements) principale affrontato nello sprint 3 è il seguente:
-- is able to show the current state of the hold, by means of a dynamically updated web-gui.
+I [requisiti](https://github.com/ingegneria-sistemi-software-m/cargoservice/tree/master/requirements) affrontati nello sprint 3 sono i seguenti:
+- is able to show the current state of the hold, by means of a dynamically updated web-gui,
+- interrupts any activity and turns on a led if the sonar sensor measures a distance D > DFREE for at least 3 secs (perhaps a sonar failure) and the service continues its activities as soon as the sonar measures a distance D <= DFREE.
 
 ## Led
 
 ### Analisi del Problema 
+
+L'attore led è semplice: è responsabile di segnalare l'eventuale malfunzionamento del sonar.
 
 #### Modello
 
 ## WebGui
 
 ### Analisi del Problema 
+
+L'attore webgui è responsabile di presentare lo stato degli slot e il peso complessivo dei container nel deposito. 
+
+Il tipico ciclo di attività di webgui è il seguente:
+1. Inizialmente richiede lo stato iniziale del deposito.
+1. Una volta ricevuto lo stato initerno diventa di perenne attesa dell'evento di modifica del deposito.
+1. Ogni volta che si verifica una modifica al deposito la webgui viene modificata di conseguenza, di modo da mostrare i cambiamenti.
 
 #### Modello
 
