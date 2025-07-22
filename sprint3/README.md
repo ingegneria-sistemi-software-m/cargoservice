@@ -11,6 +11,18 @@
 
 ## Punto di Partenza
 
+Nello sprint precedente si sono implementati i componenti: [sonar](https://github.com/ingegneria-sistemi-software-m/cargoservice/blob/master/sprint2/README.md#analisi-del-problema--sonar) e [hold](https://github.com/ingegneria-sistemi-software-m/cargoservice/blob/master/sprint2/README.md#analisi-del-problema--hold). Grazie al primo, è diventato possibile rilevare la presenza/assenza dei container, grazie al secondo è diventato possibile gestire lo stato del deposito completando in questa maniera la logica del sistema.
+
+Durante l'analisi del componente Hold si sono anche definiti i messaggi che quest'ultimo dovrà scambiarsi con la web-gui, componente che si implementerà nello sprint 3.
+
+L'architettura del sistema risultante da questo sprint è suddivisibile in due macrocontesti.
+
+<img src="../sprint2/arch2.png"/>
+
+<img src="../sprint2/iodevicesarch.png"/>
+
+<div class="page-break"></div>
+
 ## Obiettivi
 
 ## Analisi del Problema 
