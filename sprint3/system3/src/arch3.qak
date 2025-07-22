@@ -91,6 +91,7 @@ Context ctx_cargoservice 			ip [host="localhost" port=8000]
 //Context ctx_iodevices 				ip [host="127.0.0.1" port=8001]
 Context ctx_basicrobot     ip [host="my-basicrobot"   port=8020]
 Context ctx_productservice ip [host="cargoserviceqak" port=8111]  
+Context ctx_webgui       ip [host="127.0.0.1" port=8050]
 
 ExternalQActor basicrobot     context ctx_basicrobot   
 ExternalQActor productservice context ctx_productservice

@@ -33,16 +33,17 @@ class Webgui ( name: String, scope: CoroutineScope, isconfined: Boolean=false, i
 		        var CurrentState = "{}"
 		
 		        fun stateUpdate(json: String){
-		            CurrentState = json
-		            println("UPDATE RECEIVED: $json") 
+		            currentState = json
+		            println("Hold State: $currentState") 
 		        }
 		return { //this:ActionBasciFsm
 				state("init") { //this:State
 					action { //it:State
 						delay(1000) 
 						CommUtils.outblack("$name | START")
+						observeResource("127.0.0.1","8000","ctx_cargoservice","hold","hold_update")
 						CommUtils.outblack("$name | getting hold state for the first time")
-						request("get_hold_state", "get_hold_state(si)" ,"cargoservice" )  
+						request("get_hold_state", "get_hold_state(si)" ,"hold" )  
 						//genTimer( actor, state )
 					}
 					//After Lenzi Aug2002
@@ -52,10 +53,14 @@ class Webgui ( name: String, scope: CoroutineScope, isconfined: Boolean=false, i
 				}	 
 				state("handleHoldState") { //this:State
 					action { //it:State
-						
-						            val receivedState = payloadArg(0)
-						            println("$name | initial hold state: $receivedState") 
-						            stateUpdate(receivedState)
+						CommUtils.outblack("$name | processing reply")
+						if( checkMsgContent( Term.createTerm("hold_state(JSonString)"), Term.createTerm("hold_state(JSON)"), 
+						                        currentMsg.msgContent()) ) { //set msgArgList
+								
+									            val receivedState = payloadArg(0)
+									            println("$name | initial hold state: $receivedState") 
+									            stateUpdate(receivedState)
+						}
 						//genTimer( actor, state )
 					}
 					//After Lenzi Aug2002
@@ -72,10 +77,12 @@ class Webgui ( name: String, scope: CoroutineScope, isconfined: Boolean=false, i
 					sysaction { //it:State
 					}	 	 
 					 transition(edgeName="t11",targetState="update_webgui",cond=whenEvent("hold_update"))
+					transition(edgeName="t12",targetState="update_webgui",cond=whenDispatch("hold_update"))
 				}	 
 				state("update_webgui") { //this:State
 					action { //it:State
-						if( checkMsgContent( Term.createTerm("hold_update(JSonString)"), Term.createTerm("hold_update(JSON)"), 
+						CommUtils.outred("$name | update $currentMsg")
+						if( checkMsgContent( Term.createTerm("hold_update(JSonString,TERM)"), Term.createTerm("hold_update(JSON)"), 
 						                        currentMsg.msgContent()) ) { //set msgArgList
 								
 									            var UpdateJson = payloadArg(0)

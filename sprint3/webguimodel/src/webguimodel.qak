@@ -3,6 +3,7 @@ System webguimodel
 Request get_hold_state : get_hold_state(X)
 Reply   hold_state     : hold_state(JSonString) for get_hold_state
 
+Dispatch hold_update : hold_update(JSonString, TERM) "aggiornamento CoAP prodotto da updateResource"
 Event hold_update      : hold_update(JSonString)
 
 Context ctx_webgui       ip [host="localhost" port=8050]
@@ -10,47 +11,66 @@ Context ctx_cargoservice ip [host="127.0.0.1" port=8000]
 
 // cargoservice è il frontend non hold
 ExternalQActor cargoservice context ctx_cargoservice
+// hold è osservato
+ExternalQActor hold context ctx_cargoservice
+
+
 
 QActor webgui context ctx_webgui {
     [#
         var CurrentState = "{}"
 
         fun stateUpdate(json: String){
-            CurrentState = json
-            println("UPDATE RECEIVED: $json") 
+            currentState = json
+            println("Hold State: $currentState") 
         }
     #]
 
     State init initial {
         delay 1000
         println("$name | START")
+        
+        observeResource hold msgid hold_update
+        
         println("$name | getting hold state for the first time")
-	
 		// chiedo a cargoservice che girerà ad hold
-        request cargoservice -m get_hold_state : get_hold_state(si)
+//        request cargoservice -m get_hold_state : get_hold_state(si)
+    	request hold -m get_hold_state : get_hold_state(si)
     }
-
     Transition t0
         whenReply hold_state -> handleHoldState
 
+
     State handleHoldState {
-        [#
-            val receivedState = payloadArg(0)
-            println("$name | initial hold state: $receivedState") 
-            stateUpdate(receivedState)
-        #]
-        
+    	// incredibile, a quanto pare se tolgo questa stampa crasha tutto...
+    	println("$name | processing reply")
+    	
+    	onMsg( hold_state : hold_state(JSON) ) {
+	        [#
+	            val receivedState = payloadArg(0)
+	            println("$name | initial hold state: $receivedState") 
+	            stateUpdate(receivedState)
+	        #]
+        }
     }
     Goto listening
+
 
     State listening {
         println("$name | waiting for hold updates")
     }
-
     Transition t1
-        whenEvent hold_update -> update_webgui
+    	whenEvent hold_update -> update_webgui
+    	// questo è il dispatch generato da updateResource,
+    	// in teoria dovrebbe funzionare, ma nella pratica non è così...
+    	// uso anche l'evento sopra per questo motivo
+        whenMsg hold_update -> update_webgui 
+
 
    State update_webgui {
+   		println("$name | update $currentMsg") color red 
+   		
+   		// a quanto pare questo sotto non funziona e quindi usiamo solo la stampa di sopra
    		onMsg( hold_update : hold_update(JSON) ) {
 	        [#
 	            var UpdateJson = payloadArg(0)
