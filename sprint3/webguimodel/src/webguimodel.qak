@@ -1,4 +1,4 @@
-System webgui
+System webguimodel
 
 Request get_hold_state : get_hold_state(X)
 Reply   hold_state     : hold_state(JSonString) for get_hold_state
@@ -8,7 +8,8 @@ Event hold_update      : hold_update(JSonString)
 Context ctx_webgui       ip [host="localhost" port=8050]
 Context ctx_cargoservice ip [host="127.0.0.1" port=8000]
 
-ExternalQActor hold context ctx_cargoservice
+// cargoservice è il frontend non hold
+ExternalQActor cargoservice context ctx_cargoservice
 
 QActor webgui context ctx_webgui {
     [#
@@ -24,8 +25,9 @@ QActor webgui context ctx_webgui {
         delay 1000
         println("$name | START")
         println("$name | getting hold state for the first time")
-
-        request hold -m get_hold_state : get_hold_state(si)
+	
+		// chiedo a cargoservice che girerà ad hold
+        request cargoservice -m get_hold_state : get_hold_state(si)
     }
 
     Transition t0
@@ -43,19 +45,21 @@ QActor webgui context ctx_webgui {
     Goto listening
 
     State listening {
-        println("$name | waiting for MQTT messages on topic 'holdGuiUpdate'")
+        println("$name | waiting for hold updates")
     }
 
     Transition t1
         whenEvent hold_update -> update_webgui
 
    State update_webgui {
-        [#
-            val updateJson = payloadArg(0)
-            println("$name | hold update received: $updateJson") 
-            stateUpdate(updateJson)
-
-        #]
+   		onMsg( hold_update : hold_update(JSON) ) {
+	        [#
+	            var UpdateJson = payloadArg(0)
+	            println("$name | hold update received: $UpdateJson") 
+	            stateUpdate(UpdateJson)
+	
+	        #]
+        }
     }
     Goto listening
 }
