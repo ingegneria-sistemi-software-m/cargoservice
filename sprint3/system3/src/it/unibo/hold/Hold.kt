@@ -41,15 +41,23 @@ class Hold ( name: String, scope: CoroutineScope, isconfined: Boolean=false, isd
 		
 			
 				fun getHoldStateJson(): String {
+					// attenzione all'escaping delle virgolette " che circondano chiavi
+					// e valori
 				    val slotsJson = slots.map{ (key, value) ->
 				        "\"$key\": \"${if (value) "free" else "occupied"}\""
 				    }.joinToString(", ")
+					
+					// in kotling le """ indicano una raw string. 
+					// - possono essere multilinea
+					// - non c'è bisogno di caratteri di escaping (utile per JSON)
+				    val rawJson = """{"currentLoad":$currentLoad, "slots":{$slotsJson}}"""
 				
-				    val rawJson = """{"currentLoad":$currentLoad,"slots":{$slotsJson}}"""
-				
-				 	 println("DEBUG raw JSON: $rawJson")
-				
-				    return "'${rawJson.replace("'", "\\'")}'"
+				 	// println("DEBUG raw JSON: $rawJson")
+					
+					// bisogna fare attenzione a passare questa stringa come payload di
+					// un messaggio QAK! Se non la si racchiude tra apici '', il runtime
+					// QAK la interpreta male!!
+				    return rawJson
 			    }
 		return { //this:ActionBasciFsm
 				state("s0") { //this:State
@@ -93,7 +101,7 @@ class Hold ( name: String, scope: CoroutineScope, isconfined: Boolean=false, isd
 													// nel nostro caso ha un campo value in quanto è l'entry di una mappa
 													FreeSlot = slots.entries.find{it.value}?.key
 													if (FreeSlot == null){
-														Cause = "'All slots are occupied''"
+														Cause = "'All slots are occupied'"
 													}
 												}
 								if(  FreeSlot != null  
@@ -102,8 +110,8 @@ class Hold ( name: String, scope: CoroutineScope, isconfined: Boolean=false, isd
 													slots[FreeSlot] = false
 													currentLoad += weight
 													val JsonState = getHoldStateJson()
-								            		
-								emit("hold_update", "hold_update($JsonState)" ) 
+								            		val JsonMsg = "'$JsonState'" // questo va dentro ai payload dei messaggi qak
+								emit("hold_update", "hold_update($JsonMsg)" ) 
 								updateResourceRep( JsonState  
 								)
 								answer("reserve_slot", "reserve_slot_success", "reserve_slot_success($FreeSlot)"   )  
@@ -126,9 +134,10 @@ class Hold ( name: String, scope: CoroutineScope, isconfined: Boolean=false, isd
 						                        currentMsg.msgContent()) ) { //set msgArgList
 								
 												val JsonState = getHoldStateJson()
+												val JsonMsg = "'$JsonState'" // questo va dentro ai payload dei messaggi qak
 								CommUtils.outyellow("$name | sending hold state")
 								CommUtils.outred("$name | DEBUG wrapped = $JsonState")
-								answer("get_hold_state", "hold_state", "hold_state($JsonState)"   )  
+								answer("get_hold_state", "hold_state", "hold_state($JsonMsg)"   )  
 						}
 						//genTimer( actor, state )
 					}

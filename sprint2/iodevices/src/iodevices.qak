@@ -16,7 +16,8 @@ QActor sonarsimul  context ctx_iodevices{
 	State s0 initial{
 		println("$name | start")
 	}
-	Goto work
+	// Goto work
+	 Goto work2
 
 	State work{
 		delay 1000 // attendo che sonarlistener entri in attesa
@@ -84,6 +85,17 @@ QActor sonarsimul  context ctx_iodevices{
 	    delay 1000
 	    
 	    
+	}
+	
+	State work2{
+		[#
+			while(true) {
+		#]
+				emitlocalstream measurement : measurement(10)
+	    		delay 1000
+		[#	
+			}
+		#]
 	}
 }
  

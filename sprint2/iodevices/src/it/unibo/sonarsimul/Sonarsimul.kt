@@ -38,7 +38,7 @@ class Sonarsimul ( name: String, scope: CoroutineScope, isconfined: Boolean=fals
 					//After Lenzi Aug2002
 					sysaction { //it:State
 					}	 	 
-					 transition( edgeName="goto",targetState="work", cond=doswitch() )
+					 transition( edgeName="goto",targetState="work2", cond=doswitch() )
 				}	 
 				state("work") { //this:State
 					action { //it:State
@@ -92,6 +92,20 @@ class Sonarsimul ( name: String, scope: CoroutineScope, isconfined: Boolean=fals
 						delay(1000) 
 						emitLocalStreamEvent("measurement", "measurement(20)" ) 
 						delay(1000) 
+						//genTimer( actor, state )
+					}
+					//After Lenzi Aug2002
+					sysaction { //it:State
+					}	 	 
+				}	 
+				state("work2") { //this:State
+					action { //it:State
+						
+									while(true) {
+						emitLocalStreamEvent("measurement", "measurement(10)" ) 
+						delay(1000) 
+							
+									}
 						//genTimer( actor, state )
 					}
 					//After Lenzi Aug2002

@@ -16,7 +16,7 @@ Reply   reserve_slot_success : reserve_slot_success(SLOT) for reserve_slot "se l
 Reply   reserve_slot_fail    : reserve_slot_fail(CAUSA) for reserve_slot   "fallisce se il peso supera MaxLoad oppure se non c'è uno slot libero"
 
 Request get_hold_state		 : get_hold_state(X)						   "richiesta verso hold per conoscere lo stato iniziale del deposito.Contiene il peso attuale e lo stato degli slot"
-Reply   hold_state			 : hold_state(JSonString)					   "risposta verso gui da parte di hold con le informazioni interne del deposito"
+Reply   hold_state			 : hold_state(JSonString) for get_hold_state   "risposta verso gui da parte di hold con le informazioni interne del deposito"
 
 Event	hold_update			 : hold_update(JSonString)					   "evento che avvisa di un cambiamento nello stato interno di hold"
 
@@ -649,15 +649,23 @@ QActor hold context ctx_cargoservice{
 
 	
 		fun getHoldStateJson(): String {
+			// attenzione all'escaping delle virgolette " che circondano chiavi
+			// e valori
 		    val slotsJson = slots.map{ (key, value) ->
 		        "\"$key\": \"${if (value) "free" else "occupied"}\""
 		    }.joinToString(", ")
+			
+			// in kotling le """ indicano una raw string. 
+			// - possono essere multilinea
+			// - non c'è bisogno di caratteri di escaping (utile per JSON)
+		    val rawJson = """{"currentLoad":$currentLoad, "slots":{$slotsJson}}"""
 		
-		    val rawJson = """{"currentLoad":$currentLoad,"slots":{$slotsJson}}"""
-		
-		 	 println("DEBUG raw JSON: $rawJson")
-		
-		    return "'${rawJson.replace("'", "\\'")}'"
+		 	// println("DEBUG raw JSON: $rawJson")
+			
+			// bisogna fare attenzione a passare questa stringa come payload di
+			// un messaggio QAK! Se non la si racchiude tra apici '', il runtime
+			// QAK la interpreta male!!
+		    return rawJson
 	    }
 	#]
 	
@@ -697,7 +705,7 @@ QActor hold context ctx_cargoservice{
 					// nel nostro caso ha un campo value in quanto è l'entry di una mappa
 					FreeSlot = slots.entries.find{it.value}?.key
 					if (FreeSlot == null){
-						Cause = "'All slots are occupied''"
+						Cause = "'All slots are occupied'"
 					}
 				}
 			#]
@@ -708,9 +716,9 @@ QActor hold context ctx_cargoservice{
 					slots[FreeSlot] = false
 					currentLoad += weight
 					val JsonState = getHoldStateJson()
-            		
+            		val JsonMsg = "'$JsonState'" // questo va dentro ai payload dei messaggi qak
 				#]
-				emit hold_update : hold_update($JsonState)
+				emit hold_update : hold_update($JsonMsg)
 				updateResource [# JsonState #]
 				replyTo reserve_slot with reserve_slot_success : reserve_slot_success($FreeSlot)
 			}else{
@@ -726,10 +734,11 @@ QActor hold context ctx_cargoservice{
 		onMsg(get_hold_state : get_hold_state(X)){
 			[#
 				val JsonState = getHoldStateJson()
+				val JsonMsg = "'$JsonState'" // questo va dentro ai payload dei messaggi qak
 			#]
 			println("$name | sending hold state") color yellow
 			println("$name | DEBUG wrapped = $JsonState") color red
-			replyTo get_hold_state with hold_state : hold_state($JsonState)
+			replyTo get_hold_state with hold_state : hold_state($JsonMsg)
 		}
 	}
 	Goto wait_request
