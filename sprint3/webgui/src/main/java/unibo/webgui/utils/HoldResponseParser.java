@@ -76,6 +76,7 @@ public class HoldResponseParser {
 		}
 		
 		// costruisco un oggetto con slot e peso
+		System.out.println(jsonString);
 		JSONObject original = new JSONObject(jsonString);
 		int currentLoad = original.getInt("currentLoad");
 		JSONObject slotsObject = original.getJSONObject("slots");

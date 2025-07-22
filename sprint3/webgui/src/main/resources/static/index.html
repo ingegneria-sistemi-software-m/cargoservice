@@ -31,7 +31,7 @@
         
         .ship-load {
             background-color: #3498db;
-            color: white;
+            color: black;
             padding: 15px;
             border-radius: 8px;
             margin-bottom: 30px;
@@ -64,7 +64,7 @@
         .slot-id {
             font-size: 16px;
             margin-bottom: 5px;
-            color: #7f8c8d;
+            color: black;
         }
         
         .slot-status {
@@ -73,12 +73,12 @@
         
         .libero {
             background-color: #2ecc71;
-            color: white;
+            color: black;
         }
         
         .pieno {
             background-color: #e74c3c;
-            color: white;
+            color: black;
         }
         
         .connection-status {
@@ -90,12 +90,12 @@
         
         .connected {
             background-color: #2ecc71;
-            color: white;
+            color: black;
         }
         
         .disconnected {
             background-color: #e74c3c;
-            color: white;
+            color: black;
         }
         
         .last-update {
@@ -215,6 +215,7 @@
             }
         }
         
+		// 
         function updateLastUpdate() {
             const now = new Date();
             const timeString = now.toLocaleTimeString();
@@ -225,7 +226,18 @@
       
         window.onload = function() {
             connectWebSocket();
-			// TODO: fai la prima richiesta per ottenere lo stato iniziale
+			
+			//Ogni volta che si collega riceve tramite richiesta Get fatta a holdstate lo stato attuale del doposito
+			fetch("/holdstate")
+			        .then(response => response.json())
+			        .then(data => {
+			            console.log("Stato iniziale ricevuto:", data);
+			            updateUI(data);           // aggiorna l'interfaccia
+			            updateLastUpdate();       // aggiorna data/ora ultimo aggiornamento
+			        })
+			        .catch(error => {
+			            console.error("Errore nel recupero dello stato iniziale:", error);
+			        });
         };
     </script>
 </body>
