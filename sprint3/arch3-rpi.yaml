@@ -1,0 +1,115 @@
+services:
+  mosquitto:
+    image: eclipse-mosquitto:1.6.15
+    container_name: mosquitto
+    environment:
+      - MQTT_ALLOW_ANONYMOUS=true   # Permette connessioni anonime
+    ports:
+      - 1883:1883
+      - 9001:9001                   # Optional:Utilizzata per WebSocket MQTT
+    networks:
+      - iss-network
+
+  mongodb:
+    image: mongo:6.0.4
+    container_name: mongodb  
+    mem_limit: 512m
+    environment:
+      - MONGO_INITDB_DATABASE=cargodb # Nome del database da inizializzare
+    ports:
+      - "27017:27017"
+    command: mongod
+    networks:
+      - iss-network
+
+  eureka:
+    image: 'natbodocker/springcloud-eureka'                                     
+    container_name: eurekaserver 
+    ports:
+      - "8761:8761"
+    environment:
+      - EUREKA_CLIENT_REGISTER_WITH_EUREKA=true       # Il server Eureka non si registra da solo
+      - EUREKA_CLIENT_FETCH_REGISTRY=true             # Il server Eureka non recupera il registro
+      - EUREKA_SERVER_ENABLE_SELF_PRESERVATION=false   # Disabilita la modalità di auto-conservazione per testare l'auto-rimozione delle istanze
+      - EUREKA_INSTANCE_LEASE_RENEWAL_INTERVAL_IN_SECONDS=60
+      - EUREKA_INSTANCE_LEASE_EXPIRATION_DURATION_IN_SECONDS=120
+    networks:
+      - iss-network
+
+  cargoserviceqak:
+    container_name: cargoserviceqak 
+    #image: cargoserviceqak:1.0
+    image: docker.io/natbodocker/cargoserviceqak:1.0
+    environment:
+      - MONGO_HOST=mongodb
+      - SERVICE_IP=192.168.1.189
+    ports:
+      - 8111:8111/tcp
+      - 8111:8111/udp
+    depends_on:
+      - mongodb
+      - eureka
+    networks:
+      - iss-network
+
+  wenv:
+    container_name: wenv
+    image: docker.io/natbodocker/virtualrobotdisi25:2.2
+    #image: virtualrobotdisi25:2.1
+    ports:
+      - 8090:8090 
+      - 8091:8091/tcp
+      - 8091:8091/udp
+    networks:
+      - iss-network
+  
+  basicrobot24:
+    container_name: my-basicrobot
+    #image: docker.io/natbodocker/basicrobot24:3.0
+    image: koltrakak/my-basicrobot
+    mem_limit: 512m
+    ports:
+      - "8020:8020/tcp"
+      - "8020:8020/udp"
+      - "8085:8085"
+    environment:
+      - VIRTUAL_ENV=wenv                         #Used by uniborobots.robotSupport.create
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka:8761/eureka/
+      - SERVICE_HOST=192.168.1.189      #basicrobot24 per app che usano basicrobot in docker
+      - SERVICE_IP=192.168.1.189
+      - MQTTBROKER=mosquitto
+    depends_on:
+      - wenv
+      - eureka
+    networks:
+      - iss-network
+
+
+  arch3:
+    container_name: arch3
+    image: koltrakak/arch3-rpi
+    mem_limit: 512m
+    ports:
+      - "8000:8000/tcp"
+      - "8000:8000/udp"
+    networks:
+      - iss-network
+
+  webgui:
+    container_name: webgui
+    image: koltrakak/webgui
+    mem_limit: 512m
+    ports:
+      - "8080:8080/tcp"
+      - "8080:8080/udp"
+    depends_on:
+      - arch3
+    networks:
+      - iss-network
+
+networks:
+  iss-network:
+    external: true
+
+ 
+

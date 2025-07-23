@@ -87,15 +87,17 @@ Reply   envmap        : envmap(MAP)  for getenvmap
 
 
 Context ctx_cargoservice 			ip [host="localhost" port=8000]
-//Context ctx_cargoservice_clients 	ip [host="localhost" port=9000]
-Context ctx_iodevices 				ip [host="rpi.local" port=8001]
 
-/* risoluzione dei nomi funziona solo in rete domestica (dove è abilitato mDNS?) */
+/*
+ * Risoluzione dei nomi funziona solo dentro ai container (e per qualche motivo nella mia rete domestica)
+ * usare questi contesti solo quando si containerizza
+ */
+//Context ctx_iodevices 	 ip [host="sonar-simulator" port=8001]
 //Context ctx_basicrobot     ip [host="my-basicrobot"   port=8020]
 //Context ctx_productservice ip [host="cargoserviceqak" port=8111]  
 
 /* funziona in generale */
-//192.168.28.243
+Context ctx_iodevices 				ip [host="rpi.local" port=8001]
 Context ctx_basicrobot     ip [host="127.0.0.1"   port=8020]
 Context ctx_productservice ip [host="127.0.0.1" port=8111] 
 //Context ctx_webgui       ip [host="127.0.0.1" port=8050] // questo serve solo per webguimodel

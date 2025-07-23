@@ -24,6 +24,8 @@ public class HoldStateService {
 
     public HoldStateService() {
         try {
+        	// usa questo da dentro i container
+//        	conn = ConnectionFactory.createClientSupport23(ProtocolType.tcp, "arch3", "8000");
             conn = ConnectionFactory.createClientSupport23(ProtocolType.tcp, "127.0.0.1", "8000");
         } catch (Exception e) {
             System.err.println("Errore nella connessione TCP iniziale: " + e.getMessage());

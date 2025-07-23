@@ -1,0 +1,4 @@
+FROM koltrakak/arch3-local
+# sostituisco la vecchia configurazione con una nuova 
+# che specifica il contesto del rpi come contesto per il sonar 
+COPY arch3.pl /arch3-1.0/bin/arch3.pl 

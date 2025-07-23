@@ -102,9 +102,21 @@ class Sonarsimul ( name: String, scope: CoroutineScope, isconfined: Boolean=fals
 					action { //it:State
 						
 									while(true) {
+										// 1/12 di probabilità di un guasto 
+										if ((0..11).random() == 0) {
+						emitLocalStreamEvent("measurement", "measurement(100)" ) 
+						delay(1000) 
+						emitLocalStreamEvent("measurement", "measurement(100)" ) 
+						delay(1000) 
+						emitLocalStreamEvent("measurement", "measurement(100)" ) 
+						delay(5000) 
+						
+								    	}
+								    	else {
 						emitLocalStreamEvent("measurement", "measurement(10)" ) 
 						delay(1000) 
 							
+										}
 									}
 						//genTimer( actor, state )
 					}

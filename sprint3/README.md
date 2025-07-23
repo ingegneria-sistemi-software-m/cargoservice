@@ -122,6 +122,30 @@ E' stata predisposta anche una seconda pagina HTML che consente all'utente di in
 
 
 ## Deployment
+I modelli QAK sviluppati in questo sprint sono recuperabile alla [seguente repository github](https://github.com/ingegneria-sistemi-software-m/cargoservice/tree/master/sprint3), dentro alle cartella "system3/" e "iodevices/".
+
+L'intero sistema è stato **containerizzato**, il deployment risulta quindi immediato. Si hanno due possibilità: una se si ha a disposizione un raspberry pi per il sonar, alternativamente si è anche predisposta una versione del sistema con un simulatore del sonar.
+
+### Cargoservice con sonar-simulator
+
+1. eseguire ```docker compose -f arch3-local.yaml up``` per lanciare l'intero sistema
+2. aggiungere qualche prodotto al db mongo appena avviato, eseguendo con node lo script [setupmongo.js](https://github.com/ingegneria-sistemi-software-m/cargoservice/blob/master/setup_mongo.js)
+3. aprire il browser e digitare ```localhost:8090``` per visualizzare l'ambiente virtuale WEnv e il robot che effettua i suoi interventi di carico
+4. aprire un'altra scheda del browser e digitare ```localhost:8080``` per visualizzare la GUI che mostra lo stato del deposito
+5. aprire una terza e ultima finestra e digitare ```localhost:8080/caller.html``` per visualizzare una GUI con cui mandare le richieste di carico
+
+
+### Cargoservice con sonar su raspberry pi
+1. creare una distribuzione del progetto [/iodevices](https://github.com/ingegneria-sistemi-software-m/cargoservice/tree/master/sprint3/iodevices) eseguendo ```./gradlew distTar```
+2. copiare la distribuzione ottenuta dentro al raspberry, estrarre i contenuti, ed avviare i componenti sonar eseguendo il binario dentro alla cartella /bin
+3. eseguire ```docker compose -f arch3-rpi.yaml up``` per lanciare l'intero sistema (apparte il sonar e il led)
+4. aggiungere qualche prodotto al db mongo appena avviato, eseguendo con node lo script [setupmongo.js](https://github.com/ingegneria-sistemi-software-m/cargoservice/blob/master/setup_mongo.js)
+5. aprire il browser e digitare ```localhost:8090``` per visualizzare l'ambiente virtuale WEnv e il robot che effettua i suoi interventi di carico
+6. aprire un'altra scheda del browser e digitare ```localhost:8080``` per visualizzare la GUI che mostra lo stato del deposito
+7. aprire una terza e ultima finestra e digitare ```localhost:8080/caller.html``` per visualizzare una GUI con cui mandare le richieste di carico
+
+
+
 
 ## Sintesi Finale e Nuova Architettura
 

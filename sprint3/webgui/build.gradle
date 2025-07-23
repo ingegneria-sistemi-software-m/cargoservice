@@ -1,4 +1,5 @@
 plugins {
+	id 'application'    //includes java
 	id 'java'
 	id 'org.springframework.boot' version '3.4.7'
 	id 'io.spring.dependency-management' version '1.1.7'

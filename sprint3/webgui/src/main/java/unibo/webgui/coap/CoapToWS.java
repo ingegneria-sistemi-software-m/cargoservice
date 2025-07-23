@@ -15,7 +15,8 @@ import javax.annotation.PostConstruct;
 
 @Component
 public class CoapToWS {
-
+	// nome che viene risolto da dentro il container
+//	private static final String COAP_ENDPOINT = "coap://arch3:8000/ctx_cargoservice/hold";
     private static final String COAP_ENDPOINT = "coap://127.0.0.1:8000/ctx_cargoservice/hold";
 
     private CoapClient client;

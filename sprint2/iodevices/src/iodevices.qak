@@ -8,9 +8,15 @@ Event riprendi_tutto    : riprendi_tutto(X)    "evento che avvisa del ripristino
 
 
 Context ctx_iodevices 				ip [host="localhost" port=8001]
+
+
 Context ctx_cargoservice 			ip [host="127.0.0.1" port=8000] // contesto remoto
 
-
+/*
+ * Risoluzione dei nomi funziona solo dentro ai container (e per qualche motivo nella mia rete domestica)
+ * usare questi contesti solo quando si containerizza
+ */
+//Context ctx_cargoservice 			ip [host="arch3-local" port=8000]
 
 QActor sonarsimul  context ctx_iodevices{
 	State s0 initial{
@@ -90,10 +96,23 @@ QActor sonarsimul  context ctx_iodevices{
 	State work2{
 		[#
 			while(true) {
+				// 1/12 di probabilità di un guasto 
+				if ((0..11).random() == 0) {
+		 #]
+		 			emitlocalstream measurement : measurement(100)
+		    		delay 1000
+		    		emitlocalstream measurement : measurement(100)
+		    		delay 1000
+		    		emitlocalstream measurement : measurement(100)
+		    		delay 5000 // guasto per 5 secondi
+		 [#
+		    	}
+		    	else {
 		#]
-				emitlocalstream measurement : measurement(10)
-	    		delay 1000
+					emitlocalstream measurement : measurement(10)
+		    		delay 1000
 		[#	
+				}
 			}
 		#]
 	}

@@ -176,6 +176,7 @@ distributions {
     main {
         distributionBaseName = 'arch3'
         contents { 
+        	 from './cargorobot_conf.json'
              from './arch3.pl'
              from './sysRules.pl'
              from './facadeConfig.json'
