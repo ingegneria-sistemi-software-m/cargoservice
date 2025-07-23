@@ -120,7 +120,7 @@ class Cargoservice ( name: String, scope: CoroutineScope, isconfined: Boolean=fa
 						                        currentMsg.msgContent()) ) { //set msgArgList
 								 
 												val Causa = payloadArg(0) 
-												val CausaMsg = "'Non è stato possibile prenotare uno slot per (PID: $Cur_prod_PID, KG: $Cur_prod_weight). \n\tCausa: $Causa'"
+												val CausaMsg = "'Non è stato possibile prenotare uno slot per (PID: $Cur_prod_PID, KG: $Cur_prod_weight). Causa: $Causa'"
 								CommUtils.outred("$name | $CausaMsg")
 								answer("load_product", "load_refused", "load_refused($CausaMsg)"   )  
 						}

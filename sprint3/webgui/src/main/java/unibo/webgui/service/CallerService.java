@@ -4,6 +4,7 @@ import org.json.JSONObject;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import unibo.basicomm23.interfaces.IApplMessage;
@@ -15,14 +16,14 @@ import unibo.webgui.utils.HoldResponseParser;
 import unibo.webgui.ws.WSHandler;
 
 @RestController
-public class HoldStateService {
+public class CallerService {
 
     @Autowired
     private WSHandler wsHandler;
 
     private Interaction conn;
 
-    public HoldStateService() {
+    public CallerService() {
         try {
             conn = ConnectionFactory.createClientSupport23(ProtocolType.tcp, "127.0.0.1", "8000");
         } catch (Exception e) {
@@ -30,25 +31,14 @@ public class HoldStateService {
         }
     }
 
-    @GetMapping("/holdstate")
-    public String getHoldState() {
+    @GetMapping("/caller")
+    public String callCargoservice(@RequestParam("pid") String pid) {
         try {
-            IApplMessage request = CommUtils.buildRequest("webgui", "get_hold_state", "get_hold_state(X)", "hold");
-            IApplMessage response = conn.request(request);
-            CommUtils.outblue("hold-state query response:" + response.msgContent());
-            
-            String jsonString = response.msgContent().substring(
-                    "'hold_state(".length(), 
-                    response.msgContent().length() - 2 // Rimuovi il wrapper "'hold_update(" e il suffisso ")'"
-                );
-            
-            JSONObject payload = HoldResponseParser.parseHoldState(jsonString);
-            if (payload != null) {
-                wsHandler.sendToAll(payload.toString());
-                return payload.toString();
-            } else {
-                return "{\"error\":\"payload nullo\"}";
-            }
+        	CommUtils.outblue("send request to cargoservice");
+    	 	IApplMessage getreq = CommUtils.buildRequest ("webgui", "load_product","load_product("+pid+")", "cargoservice");
+            IApplMessage answer = conn.request(getreq);  //raises exception
+            CommUtils.outgreen("response" + answer);
+            return answer.msgContent();
         } catch (Exception e) {
             e.printStackTrace();
             return "{\"error\":\"" + e.getMessage() + "\"}";

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="it">
+	<head>
+	    <meta charset="UTF-8">
+	    <title>Client di cargoservice</title>
+	    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+	    <style>
+	        body {
+	            font-family: Arial, sans-serif;
+	            display: flex;
+	            flex-direction: column;
+	            align-items: center;
+	            padding: 20px;
+	            background-color: #f5f5f5;
+	        }
+	
+	        .container {
+	            background-color: white;
+	            border-radius: 10px;
+	            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+	            padding: 30px;
+	            width: 90%;
+	            max-width: 600px;
+	        }
+	
+	        h1 {
+	            color: #2c3e50;
+	            margin-bottom: 20px;
+	            text-align: center;
+	        }
+	
+	        form {
+	            display: flex;
+	            flex-direction: column;
+	            gap: 15px;
+	        }
+	
+	        input, button {
+	            padding: 10px;
+	            font-size: 16px;
+	            border-radius: 5px;
+	            border: 2px solid #ccc;
+	        }
+	
+	        button {
+	            background-color: #3498db;
+	            color: white;
+	            font-weight: bold;
+	            border: none;
+	            cursor: pointer;
+	        }
+	
+	        button:hover {
+	            background-color: #2980b9;
+	        }
+	
+	        .response-box {
+	            margin-top: 20px;
+	            padding: 15px;
+	            border: 2px #2c3e50;
+	            border-radius: 8px;
+	            background-color: #ecf0f1;
+	            font-family: monospace;
+	            white-space: pre-wrap;
+	        }
+	
+	        .error {
+	            color: #e74c3c;
+	            font-weight: bold;
+	        }
+	    </style>
+	</head>
+
+	
+	
+	<body>
+		
+		<div class="container">
+		    <h1>Invia richieste a cargoservice</h1>
+		
+		    <form id="holdForm">
+		        <input type="text" id="pidInput" name="pid" placeholder="Inserisci Product ID (e.g. 17)" required />
+		        <button type="submit">Invia richiesta</button>
+		    </form>
+		
+		    <div class="response-box" id="responseBox">Risposta di cargoservice verrà mostrata qui.</div>
+		</div>
+		
+		<script>
+		    document.getElementById("holdForm").addEventListener("submit", function (e) {
+		        e.preventDefault();
+		
+		        const pid = document.getElementById("pidInput").value.trim();
+		        const responseBox = document.getElementById("responseBox");
+		
+		        if (!pid) {
+		            responseBox.innerHTML = `<span class="error">Errore: il Product ID è obbligatorio.</span>`;
+		            return;
+		        }
+		
+		        responseBox.textContent = "Caricamento...";
+		
+		        fetch(`/caller?pid=${encodeURIComponent(pid)}`)
+		            .then(response => {
+		                if (!response.ok) {
+		                    throw new Error("Errore HTTP: " + response.status);
+		                }
+		                return response.text();
+		            })
+		            .then(data => {
+		                responseBox.textContent = data;
+		            })
+		            .catch(error => {
+		                responseBox.innerHTML = `<span class="error">Errore: ${error.message}</span>`;
+		            });
+		    });
+		</script>
+		
+	</body>
+</html>

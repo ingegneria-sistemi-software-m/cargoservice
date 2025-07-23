@@ -38,6 +38,10 @@ async function main() {
       {
         productId: 17,
         jsonRep: "{\"productId\":17,\"name\":\"p17\",\"weight\":170}"
+      },
+      {
+        productId: 1,
+        jsonRep: "{\"productId\":1,\"name\":\"p1\",\"weight\":1}"
       }
     ];
 

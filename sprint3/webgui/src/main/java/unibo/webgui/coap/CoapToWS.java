@@ -7,6 +7,8 @@ import org.eclipse.californium.core.CoapResponse;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+
+import unibo.basicomm23.utils.CommUtils;
 import unibo.webgui.utils.HoldResponseParser;
 import unibo.webgui.ws.WSHandler;
 import javax.annotation.PostConstruct;
@@ -29,14 +31,14 @@ public class CoapToWS {
             @Override
             public void onLoad(CoapResponse response) {
                 String content = response.getResponseText();
-                System.out.println("CoAP payload: " + content);
+                CommUtils.outblue("CoAP payload: " + content);
 
                 try {
                     JSONObject payload = HoldResponseParser.parseHoldState(content);
                     if (payload != null) {
                         wsHandler.sendToAll(payload.toString());
                     } else {
-                        System.err.println("Evento CoAP non valido: " + content);
+                    	CommUtils.outred("Evento CoAP non valido: " + content);
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
