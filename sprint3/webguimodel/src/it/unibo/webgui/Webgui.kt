@@ -43,7 +43,7 @@ class Webgui ( name: String, scope: CoroutineScope, isconfined: Boolean=false, i
 						CommUtils.outblack("$name | START")
 						observeResource("127.0.0.1","8000","ctx_cargoservice","hold","hold_update")
 						CommUtils.outblack("$name | getting hold state for the first time")
-						request("get_hold_state", "get_hold_state(si)" ,"hold" )  
+						request("get_hold_state", "get_hold_state(si)" ,"cargoservice" )  
 						//genTimer( actor, state )
 					}
 					//After Lenzi Aug2002

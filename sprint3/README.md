@@ -307,7 +307,7 @@ L'architettura del sistema risultante da questo sprint è definisce il nuovo mac
 
 ### WebGui
 
-![]() //immagine ancora da fare sulla webgui
+![webguimodelarch](./webguimodelarch.png) 
 
 ## Tempo Impiegato e Ripartizione del Lavoro
 

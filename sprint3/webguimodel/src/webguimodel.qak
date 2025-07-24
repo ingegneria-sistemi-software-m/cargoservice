@@ -34,8 +34,8 @@ QActor webgui context ctx_webgui {
         
         println("$name | getting hold state for the first time")
 		// chiedo a cargoservice che girerà ad hold
-//        request cargoservice -m get_hold_state : get_hold_state(si)
-    	request hold -m get_hold_state : get_hold_state(si)
+        request cargoservice -m get_hold_state : get_hold_state(si)
+//    	request hold -m get_hold_state : get_hold_state(si)
     }
     Transition t0
         whenReply hold_state -> handleHoldState

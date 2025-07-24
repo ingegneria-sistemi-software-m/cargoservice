@@ -31,6 +31,6 @@ with Diagram('webguimodelArch', show=False, outformat='png', graph_attr=graphatt
           cargoservice=Custom('cargoservice(ext)','./qakicons/externalQActor.png')
           hold=Custom('hold(ext)','./qakicons/externalQActor.png')
      sys >> Edge( label='hold_update', **evattr, decorate='true', fontcolor='darkgreen') >> webgui
-     webgui >> Edge(color='magenta', style='solid', decorate='true', label='<get_hold_state<font color="darkgreen"> hold_state</font> &nbsp; >',  fontcolor='magenta') >> hold
+     webgui >> Edge(color='magenta', style='solid', decorate='true', label='<get_hold_state<font color="darkgreen"> hold_state</font> &nbsp; >',  fontcolor='magenta') >> cargoservice
      hold >> Edge(color='blue', style='solid',  decorate='true', label='<hold_update &nbsp; >',  fontcolor='blue') >> webgui
 diag
