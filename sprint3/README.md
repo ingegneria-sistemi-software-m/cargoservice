@@ -219,9 +219,53 @@ Il WSHandler è il componente di comunicazione WebSocket occupandosi della gesti
 - Gestire tutte le sessioni client WebSocket connesse
 - Fornire un metodo **sendToAll**, che trasmette il messaggio JSON ricevuto da **HoldStateService** o **CoapToWS** a tutti i client attivi.
 
+```Java
+@Component
+public class WSHandler extends TextWebSocketHandler {
+    private final List<WebSocketSession> sessions = new CopyOnWriteArrayList<>();
+
+    @Override
+    public void afterConnectionEstablished(WebSocketSession session) {
+        sessions.add(session);
+    }
+
+    @Override
+    public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
+        sessions.remove(session);
+    }
+
+    public void sendToAll(String message) throws IOException {
+        for (WebSocketSession session : sessions) {
+            if (session.isOpen()) {
+                session.sendMessage(new TextMessage(message));
+            }
+        }
+    }
+}
+```
+
 WebSocketConfig:
 
 Implementa WebSocketConfigurer per registrare l'handler WebSocket su un endpoint specifico (/status-updates).
+
+```Java
+@Configuration
+@EnableWebSocket
+public class WebSocketConfig implements WebSocketConfigurer {
+    private final WSHandler handler;
+
+    public WebSocketConfig(WSHandler handler) {
+        this.handler = handler;
+    }
+    
+
+    @Override
+    public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
+        registry.addHandler(handler, "/status-updates")
+                .setAllowedOrigins("*");
+    }
+}
+```
 
 CoapToWS:
 
@@ -231,6 +275,50 @@ Questa componente si comporta come un osservatore CoAP. Alla sua inizializzazion
 coap://localhost:8000/ctx_cargoservice/hold
 ```
 Ogni volta che lo stato di _hold_ si aggiorna, il CoAP client riceve l'aggiornamento corrispondente tramite un messaggio. Il messaggio viene elaborato estraendo le informazioni e costruendo un nuovo JSON che viene successivamente inviato via WebSocket ai client, tramite WSHandler.
+
+```Java
+@Component
+public class CoapToWS {
+	// nome che viene risolto da dentro il container
+//	private static final String COAP_ENDPOINT = "coap://arch3:8000/ctx_cargoservice/hold";
+    private static final String COAP_ENDPOINT = "coap://127.0.0.1:8000/ctx_cargoservice/hold";
+
+    private CoapClient client;
+    private CoapObserveRelation observeRelation;
+
+    @Autowired
+    private WSHandler wsHandler;
+
+    @PostConstruct
+    public void init() {
+        client = new CoapClient(COAP_ENDPOINT);
+        observeRelation = client.observe(new CoapHandler() {
+            @Override
+            public void onLoad(CoapResponse response) {
+                String content = response.getResponseText();
+                CommUtils.outblue("CoAP payload: " + content);
+
+                try {
+                    JSONObject payload = HoldResponseParser.parseHoldState(content);
+                    if (payload != null) {
+                        wsHandler.sendToAll(payload.toString());
+                    } else {
+                    	CommUtils.outred("Evento CoAP non valido: " + content);
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+
+            @Override
+            public void onError() {
+                System.err.println("Errore nell'osservazione CoAP.");
+            }
+        });
+        System.out.println("Iniziata osservazione CoAP su: " + COAP_ENDPOINT);
+    }
+}
+```
 
 
 HoldStateService:
@@ -242,10 +330,90 @@ Questa componente ha il compito di inviare una richiesta TCP all'attore esterno 
 4. I dati ricevuti vengono convertiti in un oggetto JSON comprensibile dal browser.
 5. Il JSON successivamente viene inviato via WebSocker al browser.
 
+```Java
+@RestController
+public class HoldStateService {
+
+    @Autowired
+    private WSHandler wsHandler;
+
+    private Interaction conn;
+
+    public HoldStateService() {
+        try {
+        	// usa questo da dentro i container
+//        	conn = ConnectionFactory.createClientSupport23(ProtocolType.tcp, "arch3", "8000");
+            conn = ConnectionFactory.createClientSupport23(ProtocolType.tcp, "127.0.0.1", "8000");
+        } catch (Exception e) {
+            System.err.println("Errore nella connessione TCP iniziale: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/holdstate")
+    public String getHoldState() {
+        try {
+            IApplMessage request = CommUtils.buildRequest("webgui", "get_hold_state", "get_hold_state(X)", "hold");
+            IApplMessage response = conn.request(request);
+            CommUtils.outblue("hold-state query response:" + response.msgContent());
+            
+            String jsonString = response.msgContent().substring(
+                    "'hold_state(".length(), 
+                    response.msgContent().length() - 2 // Rimuovi il wrapper "'hold_update(" e il suffisso ")'"
+                );
+            
+            JSONObject payload = HoldResponseParser.parseHoldState(jsonString);
+            if (payload != null) {
+                wsHandler.sendToAll(payload.toString());
+                return payload.toString();
+            } else {
+                return "{\"error\":\"payload nullo\"}";
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "{\"error\":\"" + e.getMessage() + "\"}";
+        }
+    }
+}
+```
 
 CallerService:
 
 Questo componente rappresenta un altro punto d'ingresso per le richieste HTTP provenienti dal browser. Espone l'endpoint /callet?pid=XX, che invia al sistema principale una richiesta di tipo **load_product(pid)**
+
+```Java
+@RestController
+public class CallerService {
+
+    @Autowired
+    private WSHandler wsHandler;
+
+    private Interaction conn;
+
+    public CallerService() {
+        try {
+        	// usa questo da dentro i container
+//        	conn = ConnectionFactory.createClientSupport23(ProtocolType.tcp, "arch3", "8000");
+            conn = ConnectionFactory.createClientSupport23(ProtocolType.tcp, "127.0.0.1", "8000");
+        } catch (Exception e) {
+            System.err.println("Errore nella connessione TCP iniziale: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/caller")
+    public String callCargoservice(@RequestParam("pid") String pid) {
+        try {
+        	CommUtils.outblue("send request to cargoservice");
+    	 	IApplMessage getreq = CommUtils.buildRequest ("webgui", "load_product","load_product("+pid+")", "cargoservice");
+            IApplMessage answer = conn.request(getreq);  //raises exception
+            CommUtils.outgreen("response" + answer);
+            return answer.msgContent();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "{\"error\":\"" + e.getMessage() + "\"}";
+        }
+    }
+}
+```
 
 Interfaccia web:
 
@@ -262,6 +430,379 @@ E' stata predisposta anche una seconda pagina HTML che consente all'utente di in
 - Conferma del caricamento
 - Errore
 
+index.html:
+```
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hold Status</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            width: 90%;
+            max-width: 700px;
+        }
+        
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .ship-load {
+            background-color: #3498db;
+            color: black;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        
+        .slots-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .slot {
+            width: 100%;
+            height: 120px;
+            border: 3px solid #2c3e50;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-size: 20px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        .slot-id {
+            font-size: 16px;
+            margin-bottom: 5px;
+            color: black;
+        }
+        
+        .slot-status {
+            font-size: 24px;
+        }
+        
+        .libero {
+            background-color: #2ecc71;
+            color: black;
+        }
+        
+        .pieno {
+            background-color: #e74c3c;
+            color: black;
+        }
+        
+        .connection-status {
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .connected {
+            background-color: #2ecc71;
+            color: black;
+        }
+        
+        .disconnected {
+            background-color: #e74c3c;
+            color: black;
+        }
+        
+        .last-update {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #7f8c8d;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Hold Status</h1>
+        
+        <div class="ship-load">
+            Carico Nave: <span id="shipLoadValue">0</span> kg
+        </div>
+        
+        <div class="slots-container">
+            <div class="slot" id="slot1">
+                <div class="slot-id">Slot 1</div>
+                <div class="slot-status">...</div>
+            </div>
+            <div class="slot" id="slot3">
+                <div class="slot-id">Slot 3</div>
+                <div class="slot-status">...</div>
+            </div>
+            <div class="slot" id="slot2">
+                <div class="slot-id">Slot 2</div>
+                <div class="slot-status">...</div>
+            </div>
+            <div class="slot" id="slot4">
+                <div class="slot-id">Slot 4</div>
+                <div class="slot-status">...</div>
+            </div>
+        </div>
+        
+        <div class="connection-status disconnected" id="connectionStatus">
+            DISCONNESSO DAL SERVER
+        </div>
+        
+        <div class="last-update" id="lastUpdate">
+            Ultimo aggiornamento: mai
+        </div>
+    </div>
+    
+    <script>
+        let socket;
+        
+        //Funzione per connettersi al WebSocket
+        function connectWebSocket() {
+			const socketUrl = "ws://" + window.location.host + "/status-updates";
+            
+            //Crea la connessione WebSocket
+            socket = new WebSocket(socketUrl);
+            
+            //Gestione eventi WebSocket
+            socket.onopen = function(event) {
+                console.log("Connessione WebSocket stabilita");
+                updateConnectionStatus(true);
+            };
+            
+            socket.onmessage = function(event) {
+                console.log("Messaggio ricevuto:", event.data);
+                try {
+                    const data = JSON.parse(event.data);
+                    updateUI(data);
+                    updateLastUpdate();
+                } catch (e) {
+                    console.error("Errore nel parsing del JSON:", e);
+                }
+            };
+            
+            socket.onclose = function(event) {
+                console.log("Connessione WebSocket chiusa");
+                updateConnectionStatus(false);
+                
+                setTimeout(connectWebSocket, 5000);
+            };
+            
+            socket.onerror = function(error) {
+                console.error("Errore WebSocket:", error);
+                updateConnectionStatus(false);
+            };
+        }
+        
+        // Funzione per aggiornare lo stato della connessione
+        function updateConnectionStatus(connected) {
+            const statusElement = document.getElementById("connectionStatus");
+            
+            if (connected) {
+                statusElement.textContent = "CONNESSO AL SERVER";
+                statusElement.className = "connection-status connected";
+            } else {
+                statusElement.textContent = "DISCONNESSO DAL SERVER - Tentativo di riconnessione...";
+                statusElement.className = "connection-status disconnected";
+            }
+        }
+        
+        // Funzione per aggiornare l'interfaccia con i nuovi dati
+        function updateUI(data) {
+            // Aggiorna il carico della nave
+            if (data.shipLoad !== undefined) {
+                document.getElementById("shipLoadValue").textContent = data.shipLoad;
+            }
+            
+            // Aggiorna lo stato degli slot
+            if (data.slots && Array.isArray(data.slots)) {
+                for (let i = 0; i < 4; i++) {
+                    const slotElement = document.getElementById(`slot${i+1}`);
+                    const statusElement = slotElement.querySelector(".slot-status");
+                    const status = data.slots[i] || "libero"; // Default a "libero" se non specificato
+                    
+                    statusElement.textContent = status.toUpperCase();
+                    slotElement.className = "slot " + status;
+                }
+            }
+        }
+        
+		// 
+        function updateLastUpdate() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString();
+            const dateString = now.toLocaleDateString();
+            document.getElementById("lastUpdate").textContent = 
+                `Ultimo aggiornamento: ${timeString} - ${dateString}`;
+        }
+      
+        window.onload = function() {
+            connectWebSocket();
+			
+			//Ogni volta che si collega riceve tramite richiesta Get fatta a holdstate lo stato attuale del doposito
+			fetch("/holdstate")
+			        .then(response => response.json())
+			        .then(data => {
+			            console.log("Stato iniziale ricevuto:", data);
+			            updateUI(data);           // aggiorna l'interfaccia
+			            updateLastUpdate();       // aggiorna data/ora ultimo aggiornamento
+			        })
+			        .catch(error => {
+			            console.error("Errore nel recupero dello stato iniziale:", error);
+			        });
+        };
+    </script>
+</body>
+</html>
+
+```
+
+caller.html:
+```
+<!DOCTYPE html>
+<html lang="it">
+	<head>
+	    <meta charset="UTF-8">
+	    <title>Client di cargoservice</title>
+	    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+	    <style>
+	        body {
+	            font-family: Arial, sans-serif;
+	            display: flex;
+	            flex-direction: column;
+	            align-items: center;
+	            padding: 20px;
+	            background-color: #f5f5f5;
+	        }
+	
+	        .container {
+	            background-color: white;
+	            border-radius: 10px;
+	            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+	            padding: 30px;
+	            width: 90%;
+	            max-width: 600px;
+	        }
+	
+	        h1 {
+	            color: #2c3e50;
+	            margin-bottom: 20px;
+	            text-align: center;
+	        }
+	
+	        form {
+	            display: flex;
+	            flex-direction: column;
+	            gap: 15px;
+	        }
+	
+	        input, button {
+	            padding: 10px;
+	            font-size: 16px;
+	            border-radius: 5px;
+	            border: 2px solid #ccc;
+	        }
+	
+	        button {
+	            background-color: #3498db;
+	            color: white;
+	            font-weight: bold;
+	            border: none;
+	            cursor: pointer;
+	        }
+	
+	        button:hover {
+	            background-color: #2980b9;
+	        }
+	
+	        .response-box {
+	            margin-top: 20px;
+	            padding: 15px;
+	            border: 2px #2c3e50;
+	            border-radius: 8px;
+	            background-color: #ecf0f1;
+	            font-family: monospace;
+	            white-space: pre-wrap;
+	        }
+	
+	        .error {
+	            color: #e74c3c;
+	            font-weight: bold;
+	        }
+	    </style>
+	</head>
+
+	
+	
+	<body>
+		
+		<div class="container">
+		    <h1>Invia richieste a cargoservice</h1>
+		
+		    <form id="holdForm">
+		        <input type="text" id="pidInput" name="pid" placeholder="Inserisci Product ID (e.g. 17)" required />
+		        <button type="submit">Invia richiesta</button>
+		    </form>
+		
+		    <div class="response-box" id="responseBox">Risposta di cargoservice verrà mostrata qui.</div>
+		</div>
+		
+		<script>
+		    document.getElementById("holdForm").addEventListener("submit", function (e) {
+		        e.preventDefault();
+		
+		        const pid = document.getElementById("pidInput").value.trim();
+		        const responseBox = document.getElementById("responseBox");
+		
+		        if (!pid) {
+		            responseBox.innerHTML = `<span class="error">Errore: il Product ID è obbligatorio.</span>`;
+		            return;
+		        }
+		
+		        responseBox.textContent = "Caricamento...";
+		
+		        fetch(`/caller?pid=${encodeURIComponent(pid)}`)
+		            .then(response => {
+		                if (!response.ok) {
+		                    throw new Error("Errore HTTP: " + response.status);
+		                }
+		                return response.text();
+		            })
+		            .then(data => {
+		                responseBox.textContent = data;
+		            })
+		            .catch(error => {
+		                responseBox.innerHTML = `<span class="error">Errore: ${error.message}</span>`;
+		            });
+		    });
+		</script>
+		
+	</body>
+</html>
+
+```
 
 
 
