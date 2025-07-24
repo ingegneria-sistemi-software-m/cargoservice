@@ -36,24 +36,168 @@ I [requisiti](https://github.com/ingegneria-sistemi-software-m/cargoservice/tree
 
 ### Analisi del Problema 
 
-L'attore led è semplice: è responsabile di segnalare l'eventuale malfunzionamento del sonar.
+L'attore _led_ è responsabile di segnalare l'eventuale malfunzionamento del sonar. 
+
+L'analisi del problema di _led_ è banale. Quando viene emesso un evento di guasto si accende il led fisico, e quando viene emesso l'evento di ripristino quest'ultimo viene spento.  
+
+L'unica cosa non ovvia è come comandare l'accensione/spegnimento del led fisico. Similemente al caso del sonar, questo si può fare con uno script python che comanda i GPIO pin di un raspberry pi.
+
+**Nota**: Data la semplicità del componente, non è stato previsto un piano di test.
 
 #### Modello
+```Java
+QActor led context ctx_iodevices {
+	State s0 initial{
+	}
+	Goto spento
+	
+	State spento {
+		println("$name | sono spento") color red
+		[# machineExec("python ledPython25Off.py") #]
+	}
+	Transition t0
+		whenEvent interrompi_tutto -> acceso
+	
+	State acceso {
+		println("$name | sono acceso") color green
+		[# machineExec("python ledPython25On.py") #]
+	}
+	Transition t0
+		whenEvent riprendi_tutto -> spento
+}
+```
+
+
 
 ## WebGui
 
 ### Analisi del Problema 
 
-L'attore webgui è responsabile di presentare lo stato degli slot e il peso complessivo dei container nel deposito. 
+L'attore _webgui_ è responsabile di presentare lo stato degli slot e il peso complessivo dei container nel deposito. 
 
-Il tipico ciclo di attività di webgui è il seguente:
-1. Inizialmente richiede lo stato iniziale del deposito.
-1. Una volta ricevuto lo stato initerno diventa di perenne attesa dell'evento di modifica del deposito.
-1. Ogni volta che si verifica una modifica al deposito la webgui viene modificata di conseguenza, di modo da mostrare i cambiamenti.
+Si era già accennato nello [sprint2](https://github.com/ingegneria-sistemi-software-m/cargoservice/blob/master/sprint2/README.md#considerazioni-1) che lo stato del deposito mostrato dalla _webgui_ viene mantenuto dal componente _hold_, ma recuperato passando per _cargoservice_. Sempre nello stesso, si erano anche delineati dei messaggi che _webgui_ utilizzerà per recuperare lo stato del deposito e eventuali aggiornamenti di quest'ultimo(*get_hold_state* e  *hold_update*).   
+
+Il tipico ciclo di attività di _webgui_ è il seguente:
+1. All'avvio, _webgui_ richiede lo stato corrente del deposito inviando una richiesta a _cargoservice_ e comincia ad **osservare** il componente _hold_ come risorsa CoAP (vedi [progettazione sprint2](https://github.com/ingegneria-sistemi-software-m/cargoservice/blob/master/sprint2/README.md#entità-esterne))
+2. Ricevuta la risposta da _cargoservice_, _webgui_ può cominciare a mostrare lo stato del deposito 
+3. Ogni volta che si verifica una modifica al deposito, con conseguente aggiornamento della risorsa CoAP _hold_, _webgui_ mostra i cambiamenti.
 
 #### Modello
+```Java
+QActor webgui context ctx_webgui {
+    [#
+        var CurrentState = "{}"
 
-#### Piano di Test
+        fun stateUpdate(json: String){
+            CurrentState = json
+            println("Hold State: $CurrentState") 
+        }
+    #]
+
+    State init initial {
+        delay 1000
+        println("$name | START")
+        
+        // webgui osserva hold per aggiornamenti
+        observeResource hold msgid hold_update
+        
+        println("$name | getting hold state for the first time")
+		// chiedo a cargoservice che girerà ad hold
+        request cargoservice -m get_hold_state : get_hold_state(si)
+    }
+    Transition t0
+        whenReply hold_state -> handleHoldState
+
+
+    State handleHoldState {
+    	println("$name | processing reply")
+    	
+    	onMsg( hold_state : hold_state(JSON) ) {
+	        [#
+	            val receivedState = payloadArg(0)
+	            println("$name | initial hold state: $receivedState") 
+	            stateUpdate(receivedState)
+	        #]
+        }
+    }
+    Goto listening
+
+
+    State listening {
+        println("$name | waiting for hold updates")
+    }
+    Transition t1
+    	whenEvent hold_update -> update_webgui
+        // Con CoAP l'evento si traduce in un dispatch agli observer 
+        whenMsg hold_update -> update_webgui  
+
+
+   State update_webgui {
+   		println("$name | update $currentMsg") color red 
+   		
+		[#
+            var UpdateJson = payloadArg(0)
+            println("$name | hold update received: $UpdateJson") 
+            stateUpdate(UpdateJson)
+        #]
+    }
+    Goto listening
+}
+```
+
+### Piano di Test
+
+#### Scenario 1: Invio evento hold_update e verifica ricezione con CoAP
+```Java
+@Test
+public void testHoldUpdateEventReceptionWithCoap() throws Exception {
+    
+    // Serve a bloccare il main thread fino a quando i child thread non completano
+    CountDownLatch latch = new CountDownLatch(1);
+    
+    CoapClient client = new CoapClient(COAP_ENDPOINT);
+
+    CoapObserveRelation relation = client.observe(new CoapHandler() {
+        @Override
+        public void onLoad(CoapResponse response) {
+            String content = response.getResponseText();
+            System.out.println("CoAP notification received: " + response);
+
+            // Controllo se il messaggio contiene il carico aggiornato
+            if (content.contains("\"currentLoad\":100" )
+                && content.contains("\"slot1\":occupied"))
+            {
+
+                latch.countDown();
+            }
+        }
+
+        @Override
+        public void onError() {
+            System.err.println("CoAP observing failed");
+            fail("Errore durante l'osservazione CoAP");
+            latch.countDown();
+        }
+    });
+
+    // Costruisco e invio l'evento hold_update
+    String updateJson = "{\"currentLoad\":100, \"slots\": {\"slot1\":\"occupied\", \"slot2\":\"free\", \"slot3\":\"free\", \"slot4\":\"free\"}}";
+    String event = CommUtils.buildEvent("tester", "hold_update", "hold_update('" + updateJson.replace("\"", "\\\"") + "')").toString();
+
+    System.out.println("Invio evento hold_update: " + event);
+    conn.forward(event);
+
+    //Rimane bloccato qui finchè non viene eseguito latch.countDown()
+    latch.await();
+
+    // Pulizia
+    relation.proactiveCancel();
+    client.shutdown();
+    
+    assertTrue("Evento hold_update correttamente ricevuto via CoAP", true);
+}
+```
+
 
 ### Progettazione
 
@@ -71,7 +215,7 @@ Ogni componente della _webgui_ è responsabile di una specifica funzionalità, c
 
 WSHandler:
 
-Il WSHandler è il componente di comunicazione WebSocket occupandosi della gestione delle connessioni con i client browser. Le sessioni attive sono mantenute in memoria, e ogni aggiornamento ricevuto dal sistema viene immediatamente inoltrato ai client tramite broadcast JSON. Le sue funzioni principali sono quelle di:
+Il WSHandler è il componente di comunicazione WebSocket occupandosi della gestione delle connessioni con i client browser. Le sessioni attive sono mantenute in memoria, e ogni aggiornamento ricevuto dal sistema viene immediatamente inoltrato ai client tramite broadcast. Le sue funzioni principali sono quelle di:
 - Gestire tutte le sessioni client WebSocket connesse
 - Fornire un metodo **sendToAll**, che trasmette il messaggio JSON ricevuto da **HoldStateService** o **CoapToWS** a tutti i client attivi.
 
