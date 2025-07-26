@@ -67,6 +67,7 @@ services:
     container_name: my-basicrobot
     #image: docker.io/natbodocker/basicrobot24:3.0
     image: koltrakak/my-basicrobot
+    command: sh -c "echo 'aspetto eureka' && sleep 15 && ./basicrobot24"
     mem_limit: 512m
     ports:
       - "8020:8020/tcp"
@@ -108,6 +109,7 @@ services:
   webgui:
     container_name: webgui
     image: koltrakak/webgui
+    command: sh -c "echo 'aspetto arch3' && sleep 20 && ./webgui"
     mem_limit: 512m
     ports:
       - "8080:8080/tcp"

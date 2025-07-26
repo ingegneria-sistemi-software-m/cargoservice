@@ -33,7 +33,9 @@ public class CoapToWS {
             public void onLoad(CoapResponse response) {
                 String content = response.getResponseText();
                 CommUtils.outblue("CoAP payload: " + content);
-
+                
+                // Todo: gestisci il primo messaggio spurio 'noupdate' di CoAP
+                
                 try {
                     JSONObject payload = HoldResponseParser.parseHoldState(content);
                     if (payload != null) {
