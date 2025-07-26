@@ -42,7 +42,7 @@ services:
     image: docker.io/natbodocker/cargoserviceqak:1.0
     environment:
       - MONGO_HOST=mongodb
-      - SERVICE_IP=192.168.1.189
+      - SERVICE_IP=cargoserviceqak # 192.168.1.189 # boh, qua sembra che il prof abbia scambiato SERVICE_HOST con SERVICE_IP
     ports:
       - 8111:8111/tcp
       - 8111:8111/udp
@@ -75,8 +75,8 @@ services:
     environment:
       - VIRTUAL_ENV=wenv                         #Used by uniborobots.robotSupport.create
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka:8761/eureka/
-      - SERVICE_HOST=192.168.1.189      #basicrobot24 per app che usano basicrobot in docker
-      - SERVICE_IP=192.168.1.189
+      - SERVICE_HOST=my-basicrobot      # host su cui gira il servizio 'basicrobot24' per app che usano basicrobot in docker
+      # - SERVICE_IP=192.168.1.189      # indirizzo ip con cui il servizio si registra (se non lo specifico mette quello del container)
       - MQTTBROKER=mosquitto
     depends_on:
       - wenv
