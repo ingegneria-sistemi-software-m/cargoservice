@@ -92,7 +92,8 @@ Context ctx_cargoservice 			ip [host="localhost" port=8000]
  * Risoluzione dei nomi funziona solo dentro ai container (e per qualche motivo nella mia rete domestica)
  * usare questi contesti solo quando si containerizza
  */
-//Context ctx_iodevices 	 ip [host="sonar-simulator" port=8001]
+//Context ctx_iodevices 	 ip [host="sonar-simulator" port=8001] 	// per simulatore
+//Context ctx_iodevices 	 ip [host="192.168.28.129" port=8001]	// per rpi
 //Context ctx_basicrobot     ip [host="my-basicrobot"   port=8020]
 //Context ctx_productservice ip [host="cargoserviceqak" port=8111]  
 
@@ -135,7 +136,7 @@ QActor cargoservice context ctx_cargoservice {
 	}
 	Transition t0
 	   whenRequest load_product -> get_prod_weight
-	
+	   whenReply load_operation_complete -> load_request_done // questo arriva quando il cargorobot completa una richiesta precedente
 
 
 
@@ -230,8 +231,10 @@ QActor cargoservice context ctx_cargoservice {
 			request cargorobot -m handle_load_operation : handle_load_operation($Reserved_slot)
 		}
 	}
-    Transition t0
-	   whenReply load_operation_complete -> load_request_done
+	Goto wait_request
+// oppure posso fare come sotto e sincronizzare cargoservice con il cargorobot
+//    Transition t0
+//	   whenReply load_operation_complete -> load_request_done
 	 
 	State load_request_done {
 		println("$name | product (PID: $Cur_prod_PID, KG: $Cur_prod_weight) successfully loaded!") color green
@@ -503,8 +506,14 @@ import "main.java.*"
 			println("$name | cargorobot reserved_slot is $Reserved_slot = ($X, $Y)") color magenta
 		}		
    	}
-   	Transition t0
-	   	whenInterruptEvent interrompi_tutto  -> wait_resume_msg
+   	Transition t0 
+   		// questa transizione è sbagliata! stop_going_to_home è l'unico stato che aspetta
+   		// moverobotdone/failed ma in cui moving = false. Se gestisco l'interruzione con
+   		// wait_resume_msg consumo i messaggi moverobotdone/failed in coda è il robot si blocca
+   		// per sempre. 
+   		// Per questo motivo ho aggiunto il nuovo stato sotto
+//   		whenInterruptEvent interrompi_tutto  -> wait_resume_msg 
+	   	whenInterruptEvent interrompi_tutto  -> wait_resume_msg_without_blocking 
 		whenInterruptEvent container_arrived -> container_arrived_handler
 		whenInterruptEvent container_absent  -> container_absent_handler
 		// causato da alarm quando viene emesso mentre si sta facendo l'ultimo passo del piano
@@ -566,8 +575,15 @@ import "main.java.*"
    	
    	/* gestisco le interruzioni */
    	
-   	State wait_resume_msg {
+   	State wait_resume_msg_without_blocking {
    		println("$name | sonar malfunzionante, mi fermo") color red
+	}
+	Transition t0
+		whenEvent riprendi_tutto -> resume
+
+   	
+   	State wait_resume_msg {
+   		println("$name | sonar malfunzionante, mi fermo bloccandomi") color red
    		
    		emit alarm : alarm(blocca) // blocco il basicrobot
 	}
@@ -589,6 +605,7 @@ import "main.java.*"
   	// e provocorebbero delle transizioni non previste
   	State stopped_for_sonar_fault{
   		// devo solo aspettare
+  		println("$name | mi sono fermato e aspetto il ripristino del sonar") color red
    	}
    	Transition t0
    		whenEvent riprendi_tutto -> resume
@@ -606,6 +623,8 @@ import "main.java.*"
 				val X = coords[0]
 				val Y = coords[1]
 			#]
+			println("$name | vado verso $Destination")
+			
 	    	request basicrobot -m  moverobot : moverobot($X, $Y)
     	}
     	

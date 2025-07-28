@@ -78,8 +78,8 @@ class Hold ( name: String, scope: CoroutineScope, isconfined: Boolean=false, isd
 					//After Lenzi Aug2002
 					sysaction { //it:State
 					}	 	 
-					 transition(edgeName="t052",targetState="serving_get_hold_state",cond=whenRequest("get_hold_state"))
-					transition(edgeName="t053",targetState="check_reservation",cond=whenRequest("reserve_slot"))
+					 transition(edgeName="t053",targetState="serving_get_hold_state",cond=whenRequest("get_hold_state"))
+					transition(edgeName="t054",targetState="check_reservation",cond=whenRequest("reserve_slot"))
 				}	 
 				state("check_reservation") { //this:State
 					action { //it:State

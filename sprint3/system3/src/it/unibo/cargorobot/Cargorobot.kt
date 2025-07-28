@@ -250,7 +250,7 @@ class Cargorobot ( name: String, scope: CoroutineScope, isconfined: Boolean=fals
 					//After Lenzi Aug2002
 					sysaction { //it:State
 					}	 	 
-					 interrupthandle(edgeName="t035",targetState="wait_resume_msg",cond=whenEvent("interrompi_tutto"),interruptedStateTransitions)
+					 interrupthandle(edgeName="t035",targetState="wait_resume_msg_without_blocking",cond=whenEvent("interrompi_tutto"),interruptedStateTransitions)
 					interrupthandle(edgeName="t036",targetState="container_arrived_handler",cond=whenEvent("container_arrived"),interruptedStateTransitions)
 					interrupthandle(edgeName="t037",targetState="container_absent_handler",cond=whenEvent("container_absent"),interruptedStateTransitions)
 					transition(edgeName="t038",targetState="stopped_for_next_request",cond=whenReply("moverobotdone"))
@@ -298,27 +298,38 @@ class Cargorobot ( name: String, scope: CoroutineScope, isconfined: Boolean=fals
 					interrupthandle(edgeName="t046",targetState="container_absent_handler",cond=whenEvent("container_absent"),interruptedStateTransitions)
 					transition(edgeName="t047",targetState="wait_request",cond=whenDispatch("continue"))
 				}	 
-				state("wait_resume_msg") { //this:State
+				state("wait_resume_msg_without_blocking") { //this:State
 					action { //it:State
 						CommUtils.outred("$name | sonar malfunzionante, mi fermo")
-						emit("alarm", "alarm(blocca)" ) 
 						//genTimer( actor, state )
 					}
 					//After Lenzi Aug2002
 					sysaction { //it:State
 					}	 	 
 					 transition(edgeName="t048",targetState="resume",cond=whenEvent("riprendi_tutto"))
-					transition(edgeName="t049",targetState="stopped_for_sonar_fault",cond=whenReply("moverobotdone"))
-					transition(edgeName="t050",targetState="stopped_for_sonar_fault",cond=whenReply("moverobotfailed"))
 				}	 
-				state("stopped_for_sonar_fault") { //this:State
+				state("wait_resume_msg") { //this:State
 					action { //it:State
+						CommUtils.outred("$name | sonar malfunzionante, mi fermo bloccandomi")
+						emit("alarm", "alarm(blocca)" ) 
 						//genTimer( actor, state )
 					}
 					//After Lenzi Aug2002
 					sysaction { //it:State
 					}	 	 
-					 transition(edgeName="t051",targetState="resume",cond=whenEvent("riprendi_tutto"))
+					 transition(edgeName="t049",targetState="resume",cond=whenEvent("riprendi_tutto"))
+					transition(edgeName="t050",targetState="stopped_for_sonar_fault",cond=whenReply("moverobotdone"))
+					transition(edgeName="t051",targetState="stopped_for_sonar_fault",cond=whenReply("moverobotfailed"))
+				}	 
+				state("stopped_for_sonar_fault") { //this:State
+					action { //it:State
+						CommUtils.outred("$name | mi sono fermato e aspetto il ripristino del sonar")
+						//genTimer( actor, state )
+					}
+					//After Lenzi Aug2002
+					sysaction { //it:State
+					}	 	 
+					 transition(edgeName="t052",targetState="resume",cond=whenEvent("riprendi_tutto"))
 				}	 
 				state("resume") { //this:State
 					action { //it:State
@@ -328,6 +339,7 @@ class Cargorobot ( name: String, scope: CoroutineScope, isconfined: Boolean=fals
 										val coords = config.getPositions()[Destination]!!
 										val X = coords[0]
 										val Y = coords[1]
+						CommUtils.outblack("$name | vado verso $Destination")
 						request("moverobot", "moverobot($X,$Y)" ,"basicrobot" )  
 						}
 						returnFromInterrupt(interruptedStateTransitions)

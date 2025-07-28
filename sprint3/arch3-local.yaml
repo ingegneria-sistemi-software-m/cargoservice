@@ -1,15 +1,4 @@
 services:
-  mosquitto:
-    image: eclipse-mosquitto:1.6.15
-    container_name: mosquitto
-    environment:
-      - MQTT_ALLOW_ANONYMOUS=true   # Permette connessioni anonime
-    ports:
-      - 1883:1883
-      - 9001:9001                   # Optional:Utilizzata per WebSocket MQTT
-    networks:
-      - iss-network
-
   mongodb:
     image: mongo:6.0.4
     container_name: mongodb  
@@ -22,6 +11,7 @@ services:
     networks:
       - iss-network
 
+  # purtroppo mi serve a causa di cargoserviceqak
   eureka:
     image: 'natbodocker/springcloud-eureka'                                     
     container_name: eurekaserver 
@@ -65,9 +55,9 @@ services:
   
   basicrobot24:
     container_name: my-basicrobot
-    #image: docker.io/natbodocker/basicrobot24:3.0
-    image: koltrakak/my-basicrobot
-    command: sh -c "echo 'aspetto eureka' && sleep 15 && ./basicrobot24"
+    # image: koltrakak/my-basicrobot
+    image: koltrakak/my-basicrobot-slim
+    # command: sh -c "echo 'aspetto eureka' && sleep 15 && ./basicrobot24"
     mem_limit: 512m
     ports:
       - "8020:8020/tcp"
@@ -75,10 +65,11 @@ services:
       - "8085:8085"
     environment:
       - VIRTUAL_ENV=wenv                         #Used by uniborobots.robotSupport.create
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka:8761/eureka/
-      - SERVICE_HOST=my-basicrobot      # host su cui gira il servizio 'basicrobot24' per app che usano basicrobot in docker
-      # - SERVICE_IP=192.168.1.189      # indirizzo ip con cui il servizio si registra (se non lo specifico mette quello del container)
-      - MQTTBROKER=mosquitto
+      # questa roba sotto in teoria non mi serve più
+      # - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka:8761/eureka/
+      # - SERVICE_HOST=my-basicrobot      # host su cui gira il servizio 'basicrobot24' per app che usano basicrobot in docker
+      # # - SERVICE_IP=192.168.1.189      # indirizzo ip con cui il servizio si registra (se non lo specifico mette quello del container)
+      # - MQTTBROKER=mosquitto
     depends_on:
       - wenv
       - eureka
@@ -88,7 +79,8 @@ services:
 
   arch3-local:
     container_name: arch3
-    image: koltrakak/arch3-local
+    # image: koltrakak/arch3-local # versione in cui cargoservice aspetta il successo di cargorobot
+    image: koltrakak/arch3-local-async
     mem_limit: 512m
     ports:
       - "8000:8000/tcp"
@@ -109,7 +101,7 @@ services:
   webgui:
     container_name: webgui
     image: koltrakak/webgui
-    command: sh -c "echo 'aspetto arch3' && sleep 20 && ./webgui"
+    command: sh -c "echo 'aspetto arch3' && sleep 5 && ./webgui"
     mem_limit: 512m
     ports:
       - "8080:8080/tcp"

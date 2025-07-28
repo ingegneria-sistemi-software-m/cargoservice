@@ -54,6 +54,7 @@ class Cargoservice ( name: String, scope: CoroutineScope, isconfined: Boolean=fa
 					sysaction { //it:State
 					}	 	 
 					 transition(edgeName="t00",targetState="get_prod_weight",cond=whenRequest("load_product"))
+					transition(edgeName="t01",targetState="load_request_done",cond=whenReply("load_operation_complete"))
 				}	 
 				state("get_prod_weight") { //this:State
 					action { //it:State
@@ -68,7 +69,7 @@ class Cargoservice ( name: String, scope: CoroutineScope, isconfined: Boolean=fa
 					//After Lenzi Aug2002
 					sysaction { //it:State
 					}	 	 
-					 transition(edgeName="t01",targetState="check_prod_answer",cond=whenReply("getProductAnswer"))
+					 transition(edgeName="t02",targetState="check_prod_answer",cond=whenReply("getProductAnswer"))
 				}	 
 				state("check_prod_answer") { //this:State
 					action { //it:State
@@ -111,8 +112,8 @@ class Cargoservice ( name: String, scope: CoroutineScope, isconfined: Boolean=fa
 					//After Lenzi Aug2002
 					sysaction { //it:State
 					}	 	 
-					 transition(edgeName="t02",targetState="load_cargo",cond=whenReply("reserve_slot_success"))
-					transition(edgeName="t03",targetState="reserve_slot_fail",cond=whenReply("reserve_slot_fail"))
+					 transition(edgeName="t03",targetState="load_cargo",cond=whenReply("reserve_slot_success"))
+					transition(edgeName="t04",targetState="reserve_slot_fail",cond=whenReply("reserve_slot_fail"))
 				}	 
 				state("reserve_slot_fail") { //this:State
 					action { //it:State
@@ -147,7 +148,7 @@ class Cargoservice ( name: String, scope: CoroutineScope, isconfined: Boolean=fa
 					//After Lenzi Aug2002
 					sysaction { //it:State
 					}	 	 
-					 transition(edgeName="t04",targetState="load_request_done",cond=whenReply("load_operation_complete"))
+					 transition( edgeName="goto",targetState="wait_request", cond=doswitch() )
 				}	 
 				state("load_request_done") { //this:State
 					action { //it:State

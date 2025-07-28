@@ -1,14 +1,14 @@
 services:
-  mosquitto:
-    image: eclipse-mosquitto:1.6.15
-    container_name: mosquitto
-    environment:
-      - MQTT_ALLOW_ANONYMOUS=true   # Permette connessioni anonime
-    ports:
-      - 1883:1883
-      - 9001:9001                   # Optional:Utilizzata per WebSocket MQTT
-    networks:
-      - iss-network
+  # mosquitto:
+  #   image: eclipse-mosquitto:1.6.15
+  #   container_name: mosquitto
+  #   environment:
+  #     - MQTT_ALLOW_ANONYMOUS=true   # Permette connessioni anonime
+  #   ports:
+  #     - 1883:1883
+  #     - 9001:9001                   # Optional:Utilizzata per WebSocket MQTT
+  #   networks:
+  #     - iss-network
 
   mongodb:
     image: mongo:6.0.4
@@ -66,7 +66,8 @@ services:
   basicrobot24:
     container_name: my-basicrobot
     #image: docker.io/natbodocker/basicrobot24:3.0
-    image: koltrakak/my-basicrobot
+    # image: koltrakak/my-basicrobot
+    image: koltrakak/my-basicrobot-slim
     mem_limit: 512m
     ports:
       - "8020:8020/tcp"
