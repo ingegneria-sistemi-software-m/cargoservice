@@ -537,15 +537,15 @@ L'architettura del sistema risultante da questo sprint ha definito il nuovo macr
 
 ### Servizio principale
 
-![arch3](./arch3.png)
+![arch3](./img/arch3.png)
 
 ### Dispositivi di I/O
 
-<img src="./iodevicesarch.png" width="90%"  height="90%"/>
+<img src="./img/iodevicesarch.png" width="90%"  height="90%"/>
 
 ### WebGui
 
-![webguimodelarch](./webguimodelarch.png) 
+![webguimodelarch](./img/webguimodelarch.png) 
 
 ## Tempo Impiegato e Ripartizione del Lavoro
 
