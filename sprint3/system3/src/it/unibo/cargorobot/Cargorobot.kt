@@ -231,6 +231,7 @@ class Cargorobot ( name: String, scope: CoroutineScope, isconfined: Boolean=fals
 				state("stop_going_to_home") { //this:State
 					action { //it:State
 						CommUtils.outmagenta("$name | stop going to home and start serving new request immediately")
+						delay(100) 
 						emit("alarm", "alarm(blocca)" ) 
 						 moving = false  
 						if( checkMsgContent( Term.createTerm("handle_load_operation(SLOT)"), Term.createTerm("handle_load_operation(SLOT)"), 
