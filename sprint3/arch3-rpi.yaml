@@ -85,6 +85,10 @@ services:
     ports:
       - "8000:8000/tcp"
       - "8000:8000/udp"
+    # montando il volume sotto, sostituisco la configurazione dentro al container
+    # in questo modo posso modificare agilmente gli ip dei contesti se necessario
+    # volumes: 
+    #   - ./arch3.pl:/arch3-1.0/bin/arch3.pl
     networks:
       - iss-network
 
